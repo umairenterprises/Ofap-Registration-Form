@@ -3,244 +3,245 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Alkhidmat Orphan Care</title>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0d6e3b">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<title>Alkhidmat Orphan Care Registration</title>
 <style>
-  body { font-family: 'Noto Nastaliq Urdu', sans-serif; background: #f0f4f8; margin:0; padding:20px; }
- .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-  h2, h3 { text-align: center; color: #0d6e3b; }
-  h3 { background: #e8f5e9; padding: 10px; border-radius: 5px; }
-  input, select, textarea { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
- .row { display: flex; gap: 10px; }
- .row > div { flex: 1; }
-  button { background: #0d6e3b; color: white; padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer; margin: 5px; }
-  button:hover { background: #0a5a30; }
- .btn-danger { background: #d32f2f; }
- .btn-excel { background: #1d6f42; }
- .record { background: #f9f9f9; padding: 15px; margin: 10px 0; border-radius: 8px; border: 1px solid #eee; }
- .lang-btn { background: #ddd; color: #000; }
- .lang-btn.active { background: #0d6e3b; color: white; }
+    body { font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif; background: #f5f5f5; padding: 20px; }
+   .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    h2 { text-align: center; color: #2e7d32; }
+   .section { background: #e8f5e9; padding: 10px; margin: 15px 0; font-weight: bold; }
+   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 15px; }
+    input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    button { padding: 10px 20px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; }
+   .btn-save { background: #2e7d32; color: white; }
+   .btn-view { background: #1976d2; color: white; }
+   .btn-excel { background: #388e3c; color: white; }
+   .btn-pdf { background: #d32f2f; color: white; }
+   .btn-edit { background: #f57c00; color: white; padding: 5px 10px; }
+   .btn-delete { background: #c62828; color: white; padding: 5px 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
+    th { background: #2e7d32; color: white; }
+   .hidden { display: none; }
 </style>
+<script type="importmap">
+{
+  "imports": {
+    "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
+    "firebase/firestore": "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js",
+    "xlsx": "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm",
+    "jspdf": "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm"
+  }
+}
+</script>
 </head>
 <body>
-
-<!-- Language Toggle -->
-<div style="text-align:right; margin-bottom:10px;">
-  <button class="lang-btn" onclick="switchLang('en')" id="btnEn">English</button>
-  <button class="lang-btn active" onclick="switchLang('ur')" id="btnUr">اردو</button>
-</div>
-
 <div class="container">
-  <h2 id="title"></h2>
+    <h2>الخدمت فاؤنڈیشن پاکستان - کفالت یتامی پروگرام</h2>
+    <h3 style="text-align:center;">فارم برائے بنیادی معلومات</h3>
 
-  <!-- Add Record Form -->
-  <div id="addPage">
-    <h3 id="childInfo"></h3>
-    <form id="orphanForm">
-      <div class="row">
-        <div><input type="text" name="childName" id="childNamePh" required></div>
-        <div><input type="text" name="regNo" id="regNoPh"></div>
-      </div>
-      <div class="row">
-        <div>
-          <select name="gender" required>
-            <option value="" id="selectGender"></option>
-            <option id="male"></option>
-            <option id="female"></option>
-          </select>
+    <form id="registrationForm">
+        <input type="hidden" id="docId">
+
+        <div class="section">بچے کی معلومات</div>
+        <div class="grid">
+            <input type="text" id="childName" placeholder="بچے کا نام">
+            <input type="text" id="regNo" placeholder="رجسٹریشن نمبر">
+            <input type="text" id="gender" placeholder="جنس">
+            <input type="text" id="dob" placeholder="تاریخ پیدائش">
+            <input type="text" id="language" placeholder="زبان">
+            <input type="text" id="favorite" placeholder="پسندیدہ مشغلہ">
+            <input type="text" id="disability" placeholder="کیا کوئی جسمانی معذوری ہے؟">
+            <input type="text" id="futurePlan" placeholder="بڑے ہو کر کیا بننا چاہتے ہے/چاہتی ہے">
         </div>
-        <div><input type="date" name="dob"></div>
-      </div>
-      <input type="text" name="fatherName" id="fatherNamePh">
-      <input type="text" name="motherName" id="motherNamePh">
-      <input type="text" name="contactNo" id="contactNoPh">
-      <textarea name="currentAddress" id="addressPh"></textarea>
-      <button type="submit" id="saveBtn"></button>
+
+        <div class="section">بچے کی معلومات برائے اسکول</div>
+        <div class="grid">
+            <input type="text" id="schoolName" placeholder="اسکول کا نام">
+            <input type="text" id="schoolClass" placeholder="کلاس">
+            <input type="text" id="schoolAddress" placeholder="اسکول کا پتہ">
+        </div>
+
+        <div class="section">والد کی معلومات</div>
+        <div class="grid">
+            <input type="text" id="fatherName" placeholder="والد کا نام">
+            <input type="text" id="fatherDeathDate" placeholder="تاریخ وفات">
+            <input type="text" id="fatherDeathReason" placeholder="وجہ وفات">
+            <input type="text" id="fatherDeathPlace" placeholder="وقت کی جگہ">
+            <input type="text" id="fatherOccupation" placeholder="پیشہ کیا تھا">
+            <input type="text" id="fatherCnic" placeholder="والد کا شناختی کارڈ نمبر">
+        </div>
+
+        <div class="section">والدہ کی معلومات</div>
+        <div class="grid">
+            <input type="text" id="motherName" placeholder="والدہ کا نام">
+            <input type="text" id="motherStatus" placeholder="زندہ / فوت شدہ">
+            <input type="text" id="motherCnic" placeholder="والدہ کا شناختی کارڈ نمبر">
+            <input type="text" id="motherDeathDate" placeholder="تاریخ / صورت وفات">
+            <input type="text" id="motherDeathReason" placeholder="وجہ وفات">
+            <input type="text" id="childrenCount" placeholder="بچوں کی تعداد">
+            <input type="text" id="motherEducation" placeholder="والدہ کی تعلیم">
+            <input type="text" id="childrenUnder12" placeholder="12 سال سے کم عمر بچوں کی تعداد">
+            <input type="text" id="motherJob" placeholder="ملازمت کرتی ہیں یا نہیں">
+            <input type="text" id="motherJobIfYes" placeholder="اگر ہاں تو کیا">
+            <input type="text" id="housing" placeholder="مکان ذاتی / کرایہ">
+            <input type="text" id="incomeSource" placeholder="ذریعہ آمدن">
+            <input type="text" id="contactRelation" placeholder="موبائل نمبر / اور کسی قریبی رشتہ دار کا">
+            <input type="text" id="currentAddress" placeholder="موجودہ پتہ">
+            <input type="text" id="permanentAddress" placeholder="مستقل پتہ">
+        </div>
+
+        <div class="section">سرپرست کی معلومات</div>
+        <div class="grid">
+            <input type="text" id="guardianInfo" placeholder="سرپرست کی معلومات">
+            <input type="text" id="guardianRelation" placeholder="بچے کے ساتھ رشتہ">
+            <input type="text" id="guardianCnic" placeholder="شناختی کارڈ نمبر">
+            <input type="text" id="guardianMobile" placeholder="موبائل نمبر">
+            <input type="text" id="guardianAddress" placeholder="سرپرست کا پتہ">
+        </div>
+
+        <div class="section">بینک اکاؤنٹ کی تفصیلات</div>
+        <div class="grid">
+            <input type="text" id="bankName" placeholder="بینک کا نام">
+            <input type="text" id="branchCode" placeholder="برانچ کوڈ">
+            <input type="text" id="branchAddress" placeholder="برانچ کا پتہ">
+            <input type="text" id="accountTitle" placeholder="اکاؤنٹ ٹائٹل">
+            <input type="text" id="accountNo" placeholder="آئی بی این نمبر">
+        </div>
+
+        <div style="text-align:center; margin-top:20px;">
+            <button type="button" class="btn-save" onclick="saveRecord()">ریکارڈ محفوظ کریں</button>
+            <button type="button" class="btn-view" onclick="viewRecords()">ریکارڈ دیکھیں</button>
+            <button type="button" class="btn-excel" onclick="exportExcel()">Excel Export</button>
+            <button type="button" class="btn-pdf" onclick="exportPDF()">PDF Generate</button>
+        </div>
     </form>
-  </div>
 
-  <!-- Controls -->
-  <div style="margin:20px 0;">
-    <button onclick="loadRecords()" id="viewBtn"></button>
-    <button class="btn-excel" onclick="exportExcel()" id="excelBtn"></button>
-  </div>
-
-  <!-- View Records -->
-  <div id="recordsList"></div>
+    <div id="recordsDiv" class="hidden">
+        <h3>ریکارڈز</h3>
+        <table id="recordsTable">
+            <thead>
+                <tr>
+                    <th>بچے کا نام</th>
+                    <th>رجسٹریشن نمبر</th>
+                    <th>والد کا نام</th>
+                    <th>رابطہ نمبر</th>
+                    <th>ایکشن</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
 </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, addDoc, collection, getDocs, orderBy, query, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import * as XLSX from "xlsx";
+import { jsPDF } from "jspdf";
 
-// Tumhara Firebase Config
 const firebaseConfig = {
-  apiKey: "AIzaSyCm0ioszmIgJg_NEfqcTIpV_ZZxkQzyCYI",
+  apiKey: "AIzaSyBzzR8BZ3nSSxEwiPbf3ptEY2wvPy5iX3w",
   authDomain: "ofsp-registration-form.firebaseapp.com",
   projectId: "ofsp-registration-form",
   storageBucket: "ofsp-registration-form.firebasestorage.app",
-  messagingSenderId: "912908545475",
-  appId: "1:912908545475:web:4e4a8a156de0f2413ca176",
-  measurementId: "G-XLRFW1Y3F8"
+  messagingSenderId: "153857846179",
+  appId: "1:153857846179:web:b531c15a644f8c8a3e1289"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const colRef = collection(db, "registrations");
 
-let currentLang = 'ur';
-let allRecords = [];
+window.saveRecord = async function() {
+    const data = {
+        childName: childName.value, regNo: regNo.value, gender: gender.value, dob: dob.value,
+        language: language.value, favorite: favorite.value, disability: disability.value, futurePlan: futurePlan.value,
+        schoolName: schoolName.value, schoolClass: schoolClass.value, schoolAddress: schoolAddress.value,
+        fatherName: fatherName.value, fatherDeathDate: fatherDeathDate.value, fatherDeathReason: fatherDeathReason.value,
+        fatherDeathPlace: fatherDeathPlace.value, fatherOccupation: fatherOccupation.value, fatherCnic: fatherCnic.value,
+        motherName: motherName.value, motherStatus: motherStatus.value, motherCnic: motherCnic.value,
+        motherDeathDate: motherDeathDate.value, motherDeathReason: motherDeathReason.value, childrenCount: childrenCount.value,
+        motherEducation: motherEducation.value, childrenUnder12: childrenUnder12.value, motherJob: motherJob.value,
+        motherJobIfYes: motherJobIfYes.value, housing: housing.value, incomeSource: incomeSource.value,
+        contactRelation: contactRelation.value, currentAddress: currentAddress.value, permanentAddress: permanentAddress.value,
+        guardianInfo: guardianInfo.value, guardianRelation: guardianRelation.value, guardianCnic: guardianCnic.value,
+        guardianMobile: guardianMobile.value, guardianAddress: guardianAddress.value,
+        bankName: bankName.value, branchCode: branchCode.value, branchAddress: branchAddress.value,
+        accountTitle: accountTitle.value, accountNo: accountNo.value,
+        timestamp: new Date()
+    };
 
-// Translations
-const t = {
-  en: {
-    title: "Alkhidmat Orphan Care",
-    childInfo: "Child Information",
-    childName: "Child Name",
-    regNo: "Registration No",
-    selectGender: "Select Gender",
-    male: "Male",
-    female: "Female",
-    fatherName: "Father Name",
-    motherName: "Mother Name",
-    contactNo: "Contact No",
-    address: "Address",
-    save: "Save Record",
-    view: "View Records",
-    excel: "Export Excel",
-    delete: "Delete",
-    pdf: "PDF"
-  },
-  ur: {
-    title: "الخدمت یتیم کفالت",
-    childInfo: "بچے کی معلومات",
-    childName: "بچے کا نام",
-    regNo: "رجسٹریشن نمبر",
-    selectGender: "جنس منتخب کریں",
-    male: "لڑکا",
-    female: "لڑکی",
-    fatherName: "والد کا نام",
-    motherName: "والدہ کا نام",
-    contactNo: "موبائل نمبر",
-    address: "پتہ",
-    save: "ریکارڈ محفوظ کریں",
-    view: "ریکارڈ دیکھیں",
-    excel: "ایکسیل ڈاؤنلوڈ",
-    delete: "حذف کریں",
-    pdf: "پی ڈی ایف"
-  }
-};
-
-function applyLang(lang) {
-  currentLang = lang;
-  document.documentElement.dir = lang === 'ur'? 'rtl' : 'ltr';
-
-  document.getElementById('title').textContent = t[lang].title;
-  document.getElementById('childInfo').textContent = t[lang].childInfo;
-  document.getElementById('childNamePh').placeholder = t[lang].childName;
-  document.getElementById('regNoPh').placeholder = t[lang].regNo;
-  document.getElementById('selectGender').textContent = t[lang].selectGender;
-  document.getElementById('male').textContent = t[lang].male;
-  document.getElementById('female').textContent = t[lang].female;
-  document.getElementById('fatherNamePh').placeholder = t[lang].fatherName;
-  document.getElementById('motherNamePh').placeholder = t[lang].motherName;
-  document.getElementById('contactNoPh').placeholder = t[lang].contactNo;
-  document.getElementById('addressPh').placeholder = t[lang].address;
-  document.getElementById('saveBtn').textContent = t[lang].save;
-  document.getElementById('viewBtn').textContent = t[lang].view;
-  document.getElementById('excelBtn').textContent = t[lang].excel;
-
-  document.getElementById('btnEn').classList.toggle('active', lang === 'en');
-  document.getElementById('btnUr').classList.toggle('active', lang === 'ur');
+    if(docId.value) {
+        await updateDoc(doc(db, "registrations", docId.value), data);
+        alert("ریکارڈ اپڈیٹ ہو گیا");
+    } else {
+        await addDoc(colRef, data);
+        alert("ریکارڈ محفوظ ہو گیا");
+    }
+    registrationForm.reset();
+    docId.value = "";
+    viewRecords();
 }
 
-window.switchLang = applyLang;
-
-// Save Record
-document.getElementById('orphanForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const formData = Object.fromEntries(new FormData(e.target));
-  formData.timestamp = new Date().toISOString();
-
-  try {
-    await addDoc(collection(db, "orphanRegistrations"), formData);
-    alert(currentLang === 'ur'? "ریکارڈ محفوظ ہو گیا ✓" : "Record saved ✓");
-    e.target.reset();
-    loadRecords();
-  } catch (err) {
-    alert(err.message);
-  }
-});
-
-// Load Records
-window.loadRecords = async function() {
-  try {
-    const q = query(collection(db, "orphanRegistrations"), orderBy("timestamp", "desc"));
-    const snap = await getDocs(q);
-    allRecords = [];
-
-    let html = "";
-    snap.forEach((doc) => {
-      const d = doc.data();
-      d.id = doc.id;
-      allRecords.push(d);
-      html += `
-        <div class="record">
-          <h4>${d.childName || 'N/A'} - ${d.regNo || ''}</h4>
-          <p><b>${t[currentLang].fatherName}:</b> ${d.fatherName || '-'} | <b>${t[currentLang].contactNo}:</b> ${d.contactNo || '-'}</p>
-          <button onclick="generatePDF('${doc.id}')">${t[currentLang].pdf}</button>
-          <button class="btn-danger" onclick="deleteRecord('${doc.id}')">${t[currentLang].delete}</button>
-        </div>
-      `;
+window.viewRecords = async function() {
+    recordsDiv.classList.remove("hidden");
+    const snapshot = await getDocs(colRef);
+    const tbody = document.querySelector("#recordsTable tbody");
+    tbody.innerHTML = "";
+    snapshot.forEach(docSnap => {
+        const d = docSnap.data();
+        tbody.innerHTML += `<tr>
+            <td>${d.childName || ""}</td>
+            <td>${d.regNo || ""}</td>
+            <td>${d.fatherName || ""}</td>
+            <td>${d.guardianMobile || ""}</td>
+            <td>
+                <button class="btn-edit" onclick="editRecord('${docSnap.id}')">Edit</button>
+                <button class="btn-delete" onclick="deleteRecord('${docSnap.id}')">Delete</button>
+            </td>
+        </tr>`;
     });
-    document.getElementById('recordsList').innerHTML = html || "<p>No records found</p>";
-  } catch (err) {
-    alert("Error: " + err.message);
-  }
 }
 
-// Delete Record
+window.editRecord = async function(id) {
+    const snapshot = await getDocs(colRef);
+    snapshot.forEach(docSnap => {
+        if(docSnap.id == id) {
+            const d = docSnap.data();
+            docId.value = id;
+            for(let key in d) {
+                if(document.getElementById(key)) document.getElementById(key).value = d[key];
+            }
+            window.scrollTo(0,0);
+        }
+    });
+}
+
 window.deleteRecord = async function(id) {
-  if(confirm(currentLang === 'ur'? "کیا واقعی حذف کرنا ہے؟" : "Delete this record?")) {
-    await deleteDoc(doc(db, "orphanRegistrations", id));
-    loadRecords();
-  }
+    if(confirm("کیا آپ یہ ریکارڈ ڈیلیٹ کرنا چاہتے ہیں؟")) {
+        await deleteDoc(doc(db, "registrations", id));
+        viewRecords();
+    }
 }
 
-// Export Excel
-window.exportExcel = function() {
-  if(allRecords.length === 0) {
-    alert("No records to export");
-    return;
-  }
-  const ws = XLSX.utils.json_to_sheet(allRecords);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Records");
-  XLSX.writeFile(wb, "orphan_records.xlsx");
+window.exportExcel = async function() {
+    const snapshot = await getDocs(colRef);
+    const data = [];
+    snapshot.forEach(doc => data.push(doc.data()));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Records");
+    XLSX.writeFile(wb, "Alkhidmat_Records.xlsx");
 }
 
-// Generate PDF
-window.generatePDF = async function(id) {
-  const data = allRecords.find(r => r.id === id);
-  const { jsPDF } = await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-  const pdf = new jsPDF('p', 'mm', 'a4');
-  pdf.setFontSize(16);
-  pdf.text("Orphan Care Form", 105, 15, {align: 'center'});
-  pdf.setFontSize(11);
-  let y = 30;
-  for (const [key, val] of Object.entries(data)) {
-    if(key === 'id' || key === 'timestamp') continue;
-    pdf.text(`${key}: ${val || '-'}`, 15, y);
-    y += 7;
-    if(y > 280) { pdf.addPage(); y = 15; }
-  }
-  pdf.save(`${data.childName || 'record'}.pdf`);
-}
-
-window.onload = () => {
-  applyLang('ur');
-  loadRecords();
+window.exportPDF = async function() {
+    const docPDF = new jsPDF();
+    docPDF.setFont("helvetica");
+    docPDF.text("Alkhidmat Orphan Care - Registration", 10, 10);
+    docPDF.text(`Name: ${childName.value}`, 10, 20);
+    docPDF.text(`Father: ${fatherName.value}`, 10, 30);
+    docPDF.text(`Mother: ${motherName.value}`, 10, 40);
+    docPDF.save("Registration.pdf");
 }
 </script>
 </body>
