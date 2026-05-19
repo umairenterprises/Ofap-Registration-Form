@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alkhidmat Orphan Care</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d6e3b">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  body { font-family: 'Noto Nastaliq Urdu', sans-serif; background: #f0f4f8; margin:0; padding:20px; }
+ .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  h2, h3 { text-align: center; color: #0d6e3b; }
+  h3 { background: #e8f5e9; padding: 10px; border-radius: 5px; }
+  input, select, textarea { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+ .row { display: flex; gap: 10px; }
+ .row > div { flex: 1; }
+  button { background: #0d6e3b; color: white; padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer; margin: 5px; }
+  button:hover { background: #0a5a30; }
+ .btn-danger { background: #d32f2f; }
+ .btn-excel { background: #1d6f42; }
+ .record { background: #f9f9f9; padding: 15px; margin: 10px 0; border-radius: 8px; border: 1px solid #eee; }
+ .lang-btn { background: #ddd; color: #000; }
+ .lang-btn.active { background: #0d6e3b; color: white; }
+</style>
+</head>
+<body>
+
+<!-- Language Toggle -->
+<div style="text-align:right; margin-bottom:10px;">
+  <button class="lang-btn" onclick="switchLang('en')" id="btnEn">English</button>
+  <button class="lang-btn active" onclick="switchLang('ur')" id="btnUr">اردو</button>
+</div>
+
+<div class="container">
+  <h2 id="title"></h2>
+
+  <!-- Add Record Form -->
+  <div id="addPage">
+    <h3 id="childInfo"></h3>
+    <form id="orphanForm">
+      <div class="row">
+        <div><input type="text" name="childName" id="childNamePh" required></div>
+        <div><input type="text" name="regNo" id="regNoPh"></div>
+      </div>
+      <div class="row">
+        <div>
+          <select name="gender" required>
+            <option value="" id="selectGender"></option>
+            <option id="male"></option>
+            <option id="female"></option>
+          </select>
+        </div>
+        <div><input type="date" name="dob"></div>
+      </div>
+      <input type="text" name="fatherName" id="fatherNamePh">
+      <input type="text" name="motherName" id="motherNamePh">
+      <input type="text" name="contactNo" id="contactNoPh">
+      <textarea name="currentAddress" id="addressPh"></textarea>
+      <button type="submit" id="saveBtn"></button>
+    </form>
+  </div>
+
+  <!-- Controls -->
+  <div style="margin:20px 0;">
+    <button onclick="loadRecords()" id="viewBtn"></button>
+    <button class="btn-excel" onclick="exportExcel()" id="excelBtn"></button>
+  </div>
+
+  <!-- View Records -->
+  <div id="recordsList"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, addDoc, collection, getDocs, orderBy, query, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// Tumhara Firebase Config
+const firebaseConfig = {
+  apiKey: "AIzaSyCm0ioszmIgJg_NEfqcTIpV_ZZxkQzyCYI",
+  authDomain: "ofsp-registration-form.firebaseapp.com",
+  projectId: "ofsp-registration-form",
+  storageBucket: "ofsp-registration-form.firebasestorage.app",
+  messagingSenderId: "912908545475",
+  appId: "1:912908545475:web:4e4a8a156de0f2413ca176",
+  measurementId: "G-XLRFW1Y3F8"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let currentLang = 'ur';
+let allRecords = [];
+
+// Translations
+const t = {
+  en: {
+    title: "Alkhidmat Orphan Care",
+    childInfo: "Child Information",
+    childName: "Child Name",
+    regNo: "Registration No",
+    selectGender: "Select Gender",
+    male: "Male",
+    female: "Female",
+    fatherName: "Father Name",
+    motherName: "Mother Name",
+    contactNo: "Contact No",
+    address: "Address",
+    save: "Save Record",
+    view: "View Records",
+    excel: "Export Excel",
+    delete: "Delete",
+    pdf: "PDF"
+  },
+  ur: {
+    title: "الخدمت یتیم کفالت",
+    childInfo: "بچے کی معلومات",
+    childName: "بچے کا نام",
+    regNo: "رجسٹریشن نمبر",
+    selectGender: "جنس منتخب کریں",
+    male: "لڑکا",
+    female: "لڑکی",
+    fatherName: "والد کا نام",
+    motherName: "والدہ کا نام",
+    contactNo: "موبائل نمبر",
+    address: "پتہ",
+    save: "ریکارڈ محفوظ کریں",
+    view: "ریکارڈ دیکھیں",
+    excel: "ایکسیل ڈاؤنلوڈ",
+    delete: "حذف کریں",
+    pdf: "پی ڈی ایف"
+  }
+};
+
+function applyLang(lang) {
+  currentLang = lang;
+  document.documentElement.dir = lang === 'ur'? 'rtl' : 'ltr';
+
+  document.getElementById('title').textContent = t[lang].title;
+  document.getElementById('childInfo').textContent = t[lang].childInfo;
+  document.getElementById('childNamePh').placeholder = t[lang].childName;
+  document.getElementById('regNoPh').placeholder = t[lang].regNo;
+  document.getElementById('selectGender').textContent = t[lang].selectGender;
+  document.getElementById('male').textContent = t[lang].male;
+  document.getElementById('female').textContent = t[lang].female;
+  document.getElementById('fatherNamePh').placeholder = t[lang].fatherName;
+  document.getElementById('motherNamePh').placeholder = t[lang].motherName;
+  document.getElementById('contactNoPh').placeholder = t[lang].contactNo;
+  document.getElementById('addressPh').placeholder = t[lang].address;
+  document.getElementById('saveBtn').textContent = t[lang].save;
+  document.getElementById('viewBtn').textContent = t[lang].view;
+  document.getElementById('excelBtn').textContent = t[lang].excel;
+
+  document.getElementById('btnEn').classList.toggle('active', lang === 'en');
+  document.getElementById('btnUr').classList.toggle('active', lang === 'ur');
+}
+
+window.switchLang = applyLang;
+
+// Save Record
+document.getElementById('orphanForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const formData = Object.fromEntries(new FormData(e.target));
+  formData.timestamp = new Date().toISOString();
+
+  try {
+    await addDoc(collection(db, "orphanRegistrations"), formData);
+    alert(currentLang === 'ur'? "ریکارڈ محفوظ ہو گیا ✓" : "Record saved ✓");
+    e.target.reset();
+    loadRecords();
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+// Load Records
+window.loadRecords = async function() {
+  try {
+    const q = query(collection(db, "orphanRegistrations"), orderBy("timestamp", "desc"));
+    const snap = await getDocs(q);
+    allRecords = [];
+
+    let html = "";
+    snap.forEach((doc) => {
+      const d = doc.data();
+      d.id = doc.id;
+      allRecords.push(d);
+      html += `
+        <div class="record">
+          <h4>${d.childName || 'N/A'} - ${d.regNo || ''}</h4>
+          <p><b>${t[currentLang].fatherName}:</b> ${d.fatherName || '-'} | <b>${t[currentLang].contactNo}:</b> ${d.contactNo || '-'}</p>
+          <button onclick="generatePDF('${doc.id}')">${t[currentLang].pdf}</button>
+          <button class="btn-danger" onclick="deleteRecord('${doc.id}')">${t[currentLang].delete}</button>
+        </div>
+      `;
+    });
+    document.getElementById('recordsList').innerHTML = html || "<p>No records found</p>";
+  } catch (err) {
+    alert("Error: " + err.message);
+  }
+}
+
+// Delete Record
+window.deleteRecord = async function(id) {
+  if(confirm(currentLang === 'ur'? "کیا واقعی حذف کرنا ہے؟" : "Delete this record?")) {
+    await deleteDoc(doc(db, "orphanRegistrations", id));
+    loadRecords();
+  }
+}
+
+// Export Excel
+window.exportExcel = function() {
+  if(allRecords.length === 0) {
+    alert("No records to export");
+    return;
+  }
+  const ws = XLSX.utils.json_to_sheet(allRecords);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Records");
+  XLSX.writeFile(wb, "orphan_records.xlsx");
+}
+
+// Generate PDF
+window.generatePDF = async function(id) {
+  const data = allRecords.find(r => r.id === id);
+  const { jsPDF } = await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  pdf.setFontSize(16);
+  pdf.text("Orphan Care Form", 105, 15, {align: 'center'});
+  pdf.setFontSize(11);
+  let y = 30;
+  for (const [key, val] of Object.entries(data)) {
+    if(key === 'id' || key === 'timestamp') continue;
+    pdf.text(`${key}: ${val || '-'}`, 15, y);
+    y += 7;
+    if(y > 280) { pdf.addPage(); y = 15; }
+  }
+  pdf.save(`${data.childName || 'record'}.pdf`);
+}
+
+window.onload = () => {
+  applyLang('ur');
+  loadRecords();
+}
+</script>
+</body>
+</html>
