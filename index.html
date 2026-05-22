@@ -1,248 +1,409 @@
 <!DOCTYPE html>
-<html lang="ur" dir="rtl">
+<html lang="ur" dir="rtl" id="html-tag">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Alkhidmat Orphan Care Registration</title>
-<style>
-    body { font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif; background: #f5f5f5; padding: 20px; }
-   .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-    h2 { text-align: center; color: #2e7d32; }
-   .section { background: #e8f5e9; padding: 10px; margin: 15px 0; font-weight: bold; }
-   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 15px; }
-    input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-    button { padding: 10px 20px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; }
-   .btn-save { background: #2e7d32; color: white; }
-   .btn-view { background: #1976d2; color: white; }
-   .btn-excel { background: #388e3c; color: white; }
-   .btn-pdf { background: #d32f2f; color: white; }
-   .btn-edit { background: #f57c00; color: white; padding: 5px 10px; }
-   .btn-delete { background: #c62828; color: white; padding: 5px 10px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
-    th { background: #2e7d32; color: white; }
-   .hidden { display: none; }
-</style>
-<script type="importmap">
-{
-  "imports": {
-    "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
-    "firebase/firestore": "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js",
-    "xlsx": "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm",
-    "jspdf": "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm"
-  }
-}
-</script>
-</head>
-<body>
-<div class="container">
-    <h2>الخدمت فاؤنڈیشن پاکستان - کفالت یتامی پروگرام</h2>
-    <h3 style="text-align:center;">فارم برائے بنیادی معلومات</h3>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الخدمت فاؤنڈیشن پاکستان - کفالتِ یتامیٰ پروگرام</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#15803d">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://fonts.cdnfonts.com/css/jameel-noori-nastaliq" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-    <form id="registrationForm">
-        <input type="hidden" id="docId">
-
-        <div class="section">بچے کی معلومات</div>
-        <div class="grid">
-            <input type="text" id="childName" placeholder="بچے کا نام">
-            <input type="text" id="regNo" placeholder="رجسٹریشن نمبر">
-            <input type="text" id="gender" placeholder="جنس">
-            <input type="text" id="dob" placeholder="تاریخ پیدائش">
-            <input type="text" id="language" placeholder="زبان">
-            <input type="text" id="favorite" placeholder="پسندیدہ مشغلہ">
-            <input type="text" id="disability" placeholder="کیا کوئی جسمانی معذوری ہے؟">
-            <input type="text" id="futurePlan" placeholder="بڑے ہو کر کیا بننا چاہتے ہے/چاہتی ہے">
-        </div>
-
-        <div class="section">بچے کی معلومات برائے اسکول</div>
-        <div class="grid">
-            <input type="text" id="schoolName" placeholder="اسکول کا نام">
-            <input type="text" id="schoolClass" placeholder="کلاس">
-            <input type="text" id="schoolAddress" placeholder="اسکول کا پتہ">
-        </div>
-
-        <div class="section">والد کی معلومات</div>
-        <div class="grid">
-            <input type="text" id="fatherName" placeholder="والد کا نام">
-            <input type="text" id="fatherDeathDate" placeholder="تاریخ وفات">
-            <input type="text" id="fatherDeathReason" placeholder="وجہ وفات">
-            <input type="text" id="fatherDeathPlace" placeholder="وقت کی جگہ">
-            <input type="text" id="fatherOccupation" placeholder="پیشہ کیا تھا">
-            <input type="text" id="fatherCnic" placeholder="والد کا شناختی کارڈ نمبر">
-        </div>
-
-        <div class="section">والدہ کی معلومات</div>
-        <div class="grid">
-            <input type="text" id="motherName" placeholder="والدہ کا نام">
-            <input type="text" id="motherStatus" placeholder="زندہ / فوت شدہ">
-            <input type="text" id="motherCnic" placeholder="والدہ کا شناختی کارڈ نمبر">
-            <input type="text" id="motherDeathDate" placeholder="تاریخ / صورت وفات">
-            <input type="text" id="motherDeathReason" placeholder="وجہ وفات">
-            <input type="text" id="childrenCount" placeholder="بچوں کی تعداد">
-            <input type="text" id="motherEducation" placeholder="والدہ کی تعلیم">
-            <input type="text" id="childrenUnder12" placeholder="12 سال سے کم عمر بچوں کی تعداد">
-            <input type="text" id="motherJob" placeholder="ملازمت کرتی ہیں یا نہیں">
-            <input type="text" id="motherJobIfYes" placeholder="اگر ہاں تو کیا">
-            <input type="text" id="housing" placeholder="مکان ذاتی / کرایہ">
-            <input type="text" id="incomeSource" placeholder="ذریعہ آمدن">
-            <input type="text" id="contactRelation" placeholder="موبائل نمبر / اور کسی قریبی رشتہ دار کا">
-            <input type="text" id="currentAddress" placeholder="موجودہ پتہ">
-            <input type="text" id="permanentAddress" placeholder="مستقل پتہ">
-        </div>
-
-        <div class="section">سرپرست کی معلومات</div>
-        <div class="grid">
-            <input type="text" id="guardianInfo" placeholder="سرپرست کی معلومات">
-            <input type="text" id="guardianRelation" placeholder="بچے کے ساتھ رشتہ">
-            <input type="text" id="guardianCnic" placeholder="شناختی کارڈ نمبر">
-            <input type="text" id="guardianMobile" placeholder="موبائل نمبر">
-            <input type="text" id="guardianAddress" placeholder="سرپرست کا پتہ">
-        </div>
-
-        <div class="section">بینک اکاؤنٹ کی تفصیلات</div>
-        <div class="grid">
-            <input type="text" id="bankName" placeholder="بینک کا نام">
-            <input type="text" id="branchCode" placeholder="برانچ کوڈ">
-            <input type="text" id="branchAddress" placeholder="برانچ کا پتہ">
-            <input type="text" id="accountTitle" placeholder="اکاؤنٹ ٹائٹل">
-            <input type="text" id="accountNo" placeholder="آئی بی این نمبر">
-        </div>
-
-        <div style="text-align:center; margin-top:20px;">
-            <button type="button" class="btn-save" onclick="saveRecord()">ریکارڈ محفوظ کریں</button>
-            <button type="button" class="btn-view" onclick="viewRecords()">ریکارڈ دیکھیں</button>
-            <button type="button" class="btn-excel" onclick="exportExcel()">Excel Export</button>
-            <button type="button" class="btn-pdf" onclick="exportPDF()">PDF Generate</button>
-        </div>
-    </form>
-
-    <div id="recordsDiv" class="hidden">
-        <h3>ریکارڈز</h3>
-        <table id="recordsTable">
-            <thead>
-                <tr>
-                    <th>بچے کا نام</th>
-                    <th>رجسٹریشن نمبر</th>
-                    <th>والد کا نام</th>
-                    <th>رابطہ نمبر</th>
-                    <th>ایکشن</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-    </div>
-</div>
-
-<script type="module">
-import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from "firebase/firestore";
-import * as XLSX from "xlsx";
-import { jsPDF } from "jspdf";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyBzzR8BZ3nSSxEwiPbf3ptEY2wvPy5iX3w",
-  authDomain: "ofsp-registration-form.firebaseapp.com",
-  projectId: "ofsp-registration-form",
-  storageBucket: "ofsp-registration-form.firebasestorage.app",
-  messagingSenderId: "153857846179",
-  appId: "1:153857846179:web:b531c15a644f8c8a3e1289"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const colRef = collection(db, "registrations");
-
-window.saveRecord = async function() {
-    const data = {
-        childName: childName.value, regNo: regNo.value, gender: gender.value, dob: dob.value,
-        language: language.value, favorite: favorite.value, disability: disability.value, futurePlan: futurePlan.value,
-        schoolName: schoolName.value, schoolClass: schoolClass.value, schoolAddress: schoolAddress.value,
-        fatherName: fatherName.value, fatherDeathDate: fatherDeathDate.value, fatherDeathReason: fatherDeathReason.value,
-        fatherDeathPlace: fatherDeathPlace.value, fatherOccupation: fatherOccupation.value, fatherCnic: fatherCnic.value,
-        motherName: motherName.value, motherStatus: motherStatus.value, motherCnic: motherCnic.value,
-        motherDeathDate: motherDeathDate.value, motherDeathReason: motherDeathReason.value, childrenCount: childrenCount.value,
-        motherEducation: motherEducation.value, childrenUnder12: childrenUnder12.value, motherJob: motherJob.value,
-        motherJobIfYes: motherJobIfYes.value, housing: housing.value, incomeSource: incomeSource.value,
-        contactRelation: contactRelation.value, currentAddress: currentAddress.value, permanentAddress: permanentAddress.value,
-        guardianInfo: guardianInfo.value, guardianRelation: guardianRelation.value, guardianCnic: guardianCnic.value,
-        guardianMobile: guardianMobile.value, guardianAddress: guardianAddress.value,
-        bankName: bankName.value, branchCode: branchCode.value, branchAddress: branchAddress.value,
-        accountTitle: accountTitle.value, accountNo: accountNo.value,
-        timestamp: new Date()
-    };
-
-    if(docId.value) {
-        await updateDoc(doc(db, "registrations", docId.value), data);
-        alert("ریکارڈ اپڈیٹ ہو گیا");
-    } else {
-        await addDoc(colRef, data);
-        alert("ریکارڈ محفوظ ہو گیا");
-    }
-    registrationForm.reset();
-    docId.value = "";
-    viewRecords();
-}
-
-window.viewRecords = async function() {
-    recordsDiv.classList.remove("hidden");
-    const snapshot = await getDocs(colRef);
-    const tbody = document.querySelector("#recordsTable tbody");
-    tbody.innerHTML = "";
-    snapshot.forEach(docSnap => {
-        const d = docSnap.data();
-        tbody.innerHTML += `<tr>
-            <td>${d.childName || ""}</td>
-            <td>${d.regNo || ""}</td>
-            <td>${d.fatherName || ""}</td>
-            <td>${d.guardianMobile || ""}</td>
-            <td>
-                <button class="btn-edit" onclick="editRecord('${docSnap.id}')">Edit</button>
-                <button class="btn-delete" onclick="deleteRecord('${docSnap.id}')">Delete</button>
-            </td>
-        </tr>`;
-    });
-}
-
-window.editRecord = async function(id) {
-    const snapshot = await getDocs(colRef);
-    snapshot.forEach(docSnap => {
-        if(docSnap.id == id) {
-            const d = docSnap.data();
-            docId.value = id;
-            for(let key in d) {
-                if(document.getElementById(key)) document.getElementById(key).value = d[key];
-            }
-            window.scrollTo(0,0);
+    <style>
+        .urdu-font { font-family: 'Jameel Noori Nastaliq', 'Noto Nastaliq Urdu', sans-serif; }
+        input, select, textarea { font-family: sans-serif !important; }
+        .urdu-font input, .urdu-font select, .urdu-font textarea { font-family: 'Jameel Noori Nastaliq', sans-serif !important; }
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white; color: black; }
         }
-    });
-}
+        .page-active { display: block; }
+        .page-hidden { display: none; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 urdu-font text-lg min-h-screen flex flex-col">
 
-window.deleteRecord = async function(id) {
-    if(confirm("کیا آپ یہ ریکارڈ ڈیلیٹ کرنا چاہتے ہیں؟")) {
-        await deleteDoc(doc(db, "registrations", id));
-        viewRecords();
-    }
-}
+    <header class="bg-green-700 text-white shadow-md no-print sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-white p-1 rounded-lg shadow-inner">
+                    <span class="text-green-700 font-black text-2xl px-2">Al-Khidmat</span>
+                </div>
+                <h1 class="text-xl md:text-2xl font-bold tracking-wide" id="app-main-title">کفالتِ یتامیٰ ڈیش بورڈ</h1>
+            </div>
+            <nav class="flex items-center gap-2 md:gap-4 text-sm md:text-base">
+                <button onclick="switchPage('form-page')" class="px-3 py-1.5 rounded-lg bg-green-800 hover:bg-green-900 transition font-semibold cursor-pointer" data-ur="نیا فارم" data-en="New Form">نیا فارم</button>
+                <button onclick="switchPage('records-page')" class="px-3 py-1.5 rounded-lg bg-green-800 hover:bg-green-900 transition font-semibold cursor-pointer" data-ur="ریکارڈز دیکھیں" data-en="View Records">ریکارڈز دیکھیں</button>
+                <button onclick="switchPage('settings-page')" class="px-3 py-1.5 rounded-lg bg-green-800 hover:bg-green-900 transition font-semibold cursor-pointer" data-ur="سیٹنگز" data-en="Settings">سیٹنگز</button>
+                <button id="lang-btn" onclick="toggleLanguage()" class="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-slate-900 rounded-lg transition font-bold cursor-pointer">English</button>
+            </nav>
+        </div>
+    </header>
 
-window.exportExcel = async function() {
-    const snapshot = await getDocs(colRef);
-    const data = [];
-    snapshot.forEach(doc => data.push(doc.data()));
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Records");
-    XLSX.writeFile(wb, "Alkhidmat_Records.xlsx");
-}
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6 no-print">
 
-window.exportPDF = async function() {
-    const docPDF = new jsPDF();
-    docPDF.setFont("helvetica");
-    docPDF.text("Alkhidmat Orphan Care - Registration", 10, 10);
-    docPDF.text(`Name: ${childName.value}`, 10, 20);
-    docPDF.text(`Father: ${fatherName.value}`, 10, 30);
-    docPDF.text(`Mother: ${motherName.value}`, 10, 40);
-    docPDF.save("Registration.pdf");
-}
-</script>
+        <section id="form-page" class="page-active bg-white p-6 rounded-2xl shadow-xl border border-slate-100">
+            <div class="flex justify-between items-center border-b border-slate-200 pb-4 mb-6">
+                <h2 id="form-header-title" class="text-2xl md:text-3xl font-bold text-green-700">کفالتِ یتامیٰ پروگرام - بنیادی معلومات فارم</h2>
+                <span id="offline-badge" class="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-1 rounded-full border border-amber-200 flex items-center gap-1">
+                    ● آف لائن موڈ فعال ہے
+                </span>
+            </div>
+
+            <form id="orphanForm" onsubmit="handleFormSubmit(event)" class="space-y-6">
+                <input type="hidden" id="recordId">
+
+                <div class="bg-emerald-50/40 p-4 md:p-6 rounded-xl border border-emerald-100/80">
+                    <h3 class="text-xl font-bold text-emerald-800 mb-4 border-b border-emerald-200 pb-2" data-ur="1۔ بچے کی معلومات" data-en="1. Child's Information">1۔ بچے کی معلومات</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="بچے کا نام *" data-en="Child's Name *">بچے کا نام *</label>
+                            <input type="text" id="childName" required class="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 bg-white outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="رجسٹریشن نمبر *" data-en="Registration Number *">رجسٹریشن نمبر *</label>
+                            <input type="text" id="regNo" required class="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 bg-white outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="جنس *" data-en="Gender *">جنس *</label>
+                            <select id="gender" required class="w-full p-2 border border-slate-300 rounded-lg bg-white outline-none">
+                                <option value="لڑکا / Male" data-ur="لڑکا" data-en="Male">لڑکا</option>
+                                <option value="لڑکی / Female" data-ur="لڑکی" data-en="Female">لڑکی</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="تاریخِ پیدائش *" data-en="Date of Birth *">تاریخِ پیدائش *</label>
+                            <input type="date" id="dob" required class="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 bg-white outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="پسندیدہ مشغلہ" data-en="Favorite Hobby">پسندیدہ مشغلہ</label>
+                            <input type="text" id="hobby" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="زبان" data-en="Language">زبان</label>
+                            <input type="text" id="language" value="اردو" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="بڑے ہو کر کیا بننا چاہتے ہیں؟" data-en="Future Aspiration?">بڑے ہو کر کیا بننا چاہتے ہیں؟</label>
+                            <input type="text" id="futureAsp" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="کیا کوئی جسمانی معذوری ہے؟" data-en="Any Physical Disability?">کیا کوئی جسمانی معذوری ہے؟</label>
+                            <select id="disability" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                                <option value="نہیں / No" data-ur="نہیں" data-en="No">نہیں</option>
+                                <option value="ہاں / Yes" data-ur="ہاں" data-en="Yes">ہاں</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-blue-50/40 p-4 md:p-6 rounded-xl border border-blue-100">
+                    <h3 class="text-xl font-bold text-blue-800 mb-4 border-b border-blue-200 pb-2" data-ur="2۔ بچے کی معلومات برائے اسکول" data-en="2. School Information">2۔ بچے کی معلومات برائے اسکول</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="اسکول کا نام" data-en="School Name">اسکول کا نام</label>
+                            <input type="text" id="schoolName" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="کلاس" data-en="Class">کلاس</label>
+                            <input type="text" id="className" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="اسکول کا پتہ" data-en="School Address">اسکول کا پتہ</label>
+                            <input type="text" id="schoolAddress" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-stone-50 p-4 md:p-6 rounded-xl border border-stone-200">
+                    <h3 class="text-xl font-bold text-stone-800 mb-4 border-b border-stone-300 pb-2" data-ur="3۔ والد کی معلومات (مرحوم)" data-en="3. Father's Information (Deceased)">3۔ والد کی معلومات (مرحوم)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="والد کا نام" data-en="Father's Name">والد کا نام</label>
+                            <input type="text" id="fatherName" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="تاریخِ وفات" data-en="Date of Death">تاریخِ وفات</label>
+                            <input type="date" id="fatherDod" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="وجہِ وفات" data-en="Reason for Death">وجہِ وفات</label>
+                            <input type="text" id="fatherReasonDod" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="وفات کی جگہ" data-en="Place of Death">وفات کی جگہ</label>
+                            <input type="text" id="fatherPlaceDod" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="پیشہ کیا تھا؟" data-en="What was their profession?">پیشہ کیا تھا؟</label>
+                            <input type="text" id="fatherJob" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="والد کا شناختی کارڈ نمبر" data-en="Father's CNIC Number">والد کا شناختی کارڈ نمبر</label>
+                            <input type="text" id="fatherCnic" placeholder="xxxxx-xxxxxxx-x" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-purple-50/40 p-4 md:p-6 rounded-xl border border-purple-100">
+                    <h3 class="text-xl font-bold text-purple-800 mb-4 border-b border-purple-200 pb-2" data-ur="4۔ والدہ کی معلومات" data-en="4. Mother's Information">4۔ والدہ کی معلومات</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="والدہ کا نام" data-en="Mother's Name">والدہ کا نام</label>
+                            <input type="text" id="motherName" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="زندہ / فوت شدہ" data-en="Alive / Deceased">زندہ / فوت شدہ</label>
+                            <select id="motherStatus" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                                <option value="زندہ / Alive" data-ur="زندہ" data-en="Alive">زندہ</option>
+                                <option value="فوت شدہ / Deceased" data-ur="فوت شدہ" data-en="Deceased">فوت شدہ</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="والدہ کا شناختی کارڈ نمبر" data-en="Mother's CNIC">والدہ کا شناختی کارڈ نمبر</label>
+                            <input type="text" id="motherCnic" placeholder="xxxxx-xxxxxxx-x" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="تاریخِ وفات (بصورتِ وفات)" data-en="Date of Death (If applicable)">تاریخِ وفات (بصورتِ وفات)</label>
+                            <input type="date" id="motherDod" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="وجہِ وفات" data-en="Reason for Death">وجہِ وفات</label>
+                            <input type="text" id="motherReasonDod" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="بچوں کی کل تعداد" data-en="Total Children Count">بچوں کی کل تعداد</label>
+                            <input type="number" id="motherChildrenCount" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="والدہ کی تعلیم" data-en="Mother's Education">والدہ کی تعلیم</label>
+                            <input type="text" id="motherEducation" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="12 سال سے کم عمر بچوں کی تعداد" data-en="Children Under 12 Years Count">12 سال سے کم عمر بچوں کی تعداد</label>
+                            <input type="number" id="motherUnder12Count" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="مکان ذاتی / کرایہ" data-en="House Status (Owned/Rented)">مکان ذاتی / کرایہ</label>
+                            <select id="motherHouseStatus" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                                <option value="ذاتی / Owned" data-ur="ذاتی" data-en="Owned">ذاتی</option>
+                                <option value="کرایہ / Rented" data-ur="کرایہ" data-en="Rented">کرایہ</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="ملازمت کرتی ہیں؟" data-en="Do they do a job?">ملازمت کرتی ہیں؟</label>
+                            <select id="motherJobStatus" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                                <option value="نہیں / No" data-ur="نہیں" data-en="No">نہیں</option>
+                                <option value="ہاں / Yes" data-ur="ہاں" data-en="Yes">ہاں</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="اگر ہاں، تو کیا ملازمت؟" data-en="If yes, details">اگر ہاں، تو کیا ملازمت؟</label>
+                            <input type="text" id="motherJobDetails" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="ہنر" data-en="Skill/Trade">ہنر</label>
+                            <input type="text" id="motherSkill" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="ذریعہ آمدن" data-en="Income Source">ذریعہ آمدن</label>
+                            <input type="text" id="motherIncomeSource" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="موبائل نمبر / قریبی رشتہ دار" data-en="Mobile No. / Relative">موبائل نمبر / قریبی رشتہ دار</label>
+                            <input type="text" id="motherMobile" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="موجودہ پتہ" data-en="Current Address">موجودہ پتہ</label>
+                            <input type="text" id="motherCurrentAddress" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="مستقل پتہ" data-en="Permanent Address">مستقل پتہ</label>
+                            <input type="text" id="motherPermanentAddress" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-amber-50/40 p-4 md:p-6 rounded-xl border border-amber-100">
+                    <h3 class="text-xl font-bold text-amber-800 mb-4 border-b border-amber-200 pb-2" data-ur="5۔ سرپرست کی معلومات" data-en="5. Guardian's Information">5۔ سرپرست کی معلومات</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="سرپرست کا نام" data-en="Guardian's Name">سرپرست کا نام</label>
+                            <input type="text" id="guardianName" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="بچے کے ساتھ رشتہ" data-en="Relationship with Child">بچے کے ساتھ رشتہ</label>
+                            <input type="text" id="guardianRelation" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="شناختی کارڈ نمبر" data-en="Guardian's CNIC">شناختی کارڈ نمبر</label>
+                            <input type="text" id="guardianCnic" placeholder="xxxxx-xxxxxxx-x" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="پیشہ" data-en="Profession">پیشہ</label>
+                            <input type="text" id="guardianJob" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="موبائل نمبر" data-en="Mobile Number">موبائل نمبر</label>
+                            <input type="text" id="guardianMobile" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="سرپرست کا پتہ" data-en="Guardian's Address">سرپرست کا پتہ</label>
+                            <input type="text" id="guardianAddress" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-sky-50/40 p-4 md:p-6 rounded-xl border border-sky-100">
+                    <h3 class="text-xl font-bold text-sky-800 mb-4 border-b border-sky-200 pb-2" data-ur="6۔ بینک اکاؤنٹ کی تفصیلات" data-en="6. Bank Account Details">6۔ بینک اکاؤنٹ کی تفصیلات</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="بینک کا نام" data-en="Bank Name">بینک کا نام</label>
+                            <input type="text" id="bankName" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="برانچ کوڈ" data-en="Branch Code">برانچ کوڈ</label>
+                            <input type="text" id="bankBranchCode" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="برانچ کا پتہ" data-en="Branch Address">برانچ کا پتہ</label>
+                            <input type="text" id="bankBranchAddress" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="اکاؤنٹ ٹائٹل" data-en="Account Title">اکاؤنٹ ٹائٹل</label>
+                            <input type="text" id="bankAccountTitle" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1 text-slate-600" data-ur="آئی بی این نمبر (IBAN)" data-en="IBAN Number">آئی بی این نمبر (IBAN)</label>
+                            <input type="text" id="bankIban" placeholder="PKXXAAAA" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-rose-50/30 p-4 md:p-6 rounded-xl border border-rose-100">
+                    <h3 class="text-xl font-bold text-rose-800 mb-4 border-b border-rose-200 pb-2" data-ur="7۔ موجودہ کاغذات کی معلومات / چیک لسٹ" data-en="7. Document Checklist">7۔ موجودہ کاغذات کی معلومات / چیک لسٹ</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <label class="flex items-center gap-3 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                            <input type="checkbox" id="docPhoto" class="w-5 h-5 accent-green-600">
+                            <span data-ur="بچے کی تصویر" data-en="Child's Photo">بچے کی تصویر</span>
+                        </label>
+                        <label class="flex items-center gap-3 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                            <input type="checkbox" id="docBirthCert" class="w-5 h-5 accent-green-600">
+                            <span data-ur="پیدائش کا سرٹیفکیٹ / ب فارم" data-en="Birth Certificate / B-Form">پیدائش کا سرٹیفکیٹ / ب فارم</span>
+                        </label>
+                        <label class="flex items-center gap-3 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                            <input type="checkbox" id="docDeathCert" class="w-5 h-5 accent-green-600">
+                            <span data-ur="والد کا ڈیتھ سرٹیفکیٹ" data-en="Father's Death Certificate">والد کا ڈیتھ سرٹیفکیٹ</span>
+                        </label>
+                        <label class="flex items-center gap-3 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                            <input type="checkbox" id="docMotherCnic" class="w-5 h-5 accent-green-600">
+                            <span data-ur="والدہ کا شناختی کارڈ" data-en="Mother's CNIC Card">والدہ کا شناختی کارڈ</span>
+                        </label>
+                        <label class="flex items-center gap-3 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                            <input type="checkbox" id="docFatherCnic" class="w-5 h-5 accent-green-600">
+                            <span data-ur="والد کا شناختی کارڈ (کاپی)" data-en="Father's CNIC Copy">والد کا شناختی کارڈ (کاپی)</span>
+                        </label>
+                        <label class="flex items-center gap-3 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                            <input type="checkbox" id="docSchoolCert" class="w-5 h-5 accent-green-600">
+                            <span data-ur="اسکول حاضری کا سرٹیفکیٹ" data-en="School Attendance Certificate">اسکول حاضری کا سرٹیفکیٹ</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition duration-200 text-xl cursor-pointer" id="form-submit-btn">
+                        ڈیٹا محفوظ کریں / Save Record
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <section id="records-page" class="page-hidden bg-white p-6 rounded-2xl shadow-xl border border-slate-100">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-4 mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800" data-ur="محفوظ شدہ یتامیٰ ریکارڈز" data-en="Saved Orphan Records">محفوظ شدہ یتامیٰ ریکارڈز</h2>
+                    <p class="text-sm text-slate-500 mt-1" data-ur="یہاں آپ ریکارڈ سرچ، ایڈٹ، ڈیلیٹ اور رپورٹ ایکسپورٹ کر سکتے ہیں۔" data-en="Search, edit, delete, and export records here.">یہاں آپ ریکارڈ سرچ، ایڈٹ، ڈیلیٹ اور رپورٹ ایکسپورٹ کر سکتے ہیں۔</p>
+                </div>
+                <button onclick="exportToExcel()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-xl shadow transition text-sm cursor-pointer" data-ur="مکمل ڈیٹا ایکسیل (Excel) میں ایکسپورٹ کریں" data-en="Export All to Excel">
+                    Excel رپورٹ ڈاؤن لوڈ کریں
+                </button>
+            </div>
+
+            <div class="mb-6">
+                <input type="text" id="searchBar" oninput="filterRecords()" placeholder="بچے کا نام یا رجسٹریشن نمبر لکھ کر تلاش کریں..." class="w-full p-3 border border-slate-300 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-green-600 text-base">
+            </div>
+
+            <div class="overflow-x-auto rounded-xl border border-slate-200">
+                <table class="w-full border-collapse text-right text-sm md:text-base">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-700 border-b border-slate-200">
+                            <th class="p-3 text-center" data-ur="رجسٹریشن نمبر" data-en="Reg No.">رجسٹریشن نمبر</th>
+                            <th class="p-3" data-ur="بچے کا نام" data-en="Child Name">بچے کا نام</th>
+                            <th class="p-3" data-ur="والد کا نام" data-en="Father Name">والد کا نام</th>
+                            <th class="p-3" data-ur="موبائل نمبر" data-en="Mobile No.">موبائل نمبر</th>
+                            <th class="p-3 text-center" data-ur="ایکشنز" data-en="Actions">ایکشنز</th>
+                        </tr>
+                    </thead>
+                    <tbody id="records-tbody" class="divide-y divide-slate-200">
+                        </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="settings-page" class="page-hidden bg-white p-6 rounded-2xl shadow-xl border border-slate-100">
+            <h2 class="text-2xl font-bold text-slate-800 border-b pb-3 mb-6" data-ur="سسٹم سیٹنگز اور یوزرز" data-en="System Settings & Users">سسٹم سیٹنگز اور یوزرز</h2>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="p-5 border border-slate-200 rounded-xl bg-slate-50/50">
+                    <h3 class="text-lg font-bold text-slate-700 mb-4" data-ur="فعال صارف (Active User)" data-en="Active User Profile">فعال صارف (Active User)</h3>
+                    <div class="space-y-3 text-base">
+                        <p><strong>صارف کا نام:</strong> الخدمت ایڈمنسٹریٹر (Admin)</p>
+                        <p><strong>حيثيت:</strong> سپر ایڈمن (Super Admin)</p>
+                        <p><strong>ڈیٹا بیس اسٹیٹس:</strong> کلاؤڈ سنکرونائزڈ (Firebase Cloud Active)</p>
+                    </div>
+                </div>
+
+                <div class="p-5 border border-slate-200 rounded-xl bg-slate-50/50 space-y-4">
+                    <h3 class="text-lg font-bold text-slate-700" data-ur="ڈیٹا بیس کنٹرول" data-en="Database Control">ڈیٹا بیس کنٹرول</h3>
+                    <p class="text-sm text-slate-500">اگر آپ کے پاس لوکل براؤزر میموری میں غیر مطابقت پذیر (Unsynced) ڈیٹا ہے تو کلاؤڈ پر فورس سنک کریں۔</p>
+                    <button onclick="alert('تمام لوکل ڈیٹا پہلے سے ہی مطابقت پذیر ہے!')" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold py-2.5 px-4 rounded-lg transition cursor-pointer">
+                        فورس کلاؤڈ ڈیٹا سنک (Force Sync)
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-slate-800 text-slate-400 text-center py-4 text-xs mt-auto no-print">
+        <p>© 2026 الخدمت فاؤنڈیشن پاکستان - کفالتِ یتامیٰ پروگرام | ڈیجیٹل ڈیٹا انٹری مینجمنٹ سسٹم</p>
+    </footer>
+
+    <div id="pdf-container" class="hidden p-8 bg-white text-black text-sm" style="direction: rtl;">
+        <div class="text-center border-b-4 border-green-700 pb-4 mb-6">
+            <h1 class="text-2xl font-bold">الخدمت فاؤنڈیشن پاکستان</h1>
+            <h2 class="text-lg font-semibold mt-1 text-slate-700">کفالتِ یتامیٰ پروگرام (بنیادی معلومات رپورٹ)</h2>
+        </div>
+        
+        <div id="pdf-dynamic-content" class="space-y-6">
+            </div>
+
+        <div class="mt-16 flex justify-between text-xs pt-8 border-t border-dashed border-slate-300">
+            <div class="text-center">
+                <p class="mb-12">______________________________________</p>
+                <p class="font-bold">دستخط والدہ / سرپرست</p>
+            </div>
+            <div class="text-center">
+                <p class="mb-12">______________________________________</p>
+                <p class="font-bold">دستخط و مہر ڈسٹرکٹ کوآرڈینیٹر الخدمت</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
 </body>
 </html>
