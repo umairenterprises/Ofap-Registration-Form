@@ -1,5 +1,5 @@
-const CACHE_NAME = 'alkhidmat-orphan-v1';
-const ASSETS_TO_CACHE = [
+const CACHE_NAME = 'alkhidmat-ops-v2';
+const ASSETS = [
   '/',
   '/index.html',
   '/app.js',
@@ -10,19 +10,10 @@ const ASSETS_TO_CACHE = [
   'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'
 ];
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
-    })
-  );
+self.addEventListener('install', (e) => {
+  e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)));
 });
 
-self.addEventListener('fetch', (event) => {
-  event.preventDefault();
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      return cachedResponse || fetch(event.request);
-    })
-  );
+self.addEventListener('fetch', (e) => {
+  e.respondWith(caches.match(e.request).then(res => res || fetch(e.request)));
 });

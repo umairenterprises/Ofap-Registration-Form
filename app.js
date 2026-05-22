@@ -1,5 +1,5 @@
-// ⚙️ فائر بیس کنفیگریشن تفصیلات (Replace with your actual keys)
-
+// ⚙️ فائر بیس کنفیگریشن تفصیلات (اپنے فائر بیس کنسول والی اصل چابیاں یہاں لکھیں)
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyCm0ioszmIgJg_NEfqcTIpV_ZZxkQzyCYI",
   authDomain: "ofsp-registration-form.firebaseapp.com",
@@ -10,68 +10,212 @@ const firebaseConfig = {
   measurementId: "G-XLRFW1Y3F8"
 };
 
-// Initialize Cloud Services
 firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
 const db = firebase.firestore();
+const storage = firebase.storage();
 
-// 🟢 آف لائن ڈیٹا پرسٹنس ایکٹیویشن (Offline Persistence for PWA capability)
-db.enablePersistence().catch((err) => {
-    if (err.code == 'failed-precondition') {
-        console.warn('Persistence failed: Multiple tabs open');
-    } else if (err.code == 'unimplemented') {
-        console.warn('Persistence not supported by browser');
-    }
-});
+// آف لائن سپورٹ پرسٹنس فعال کریں
+db.enablePersistence().catch(err => console.log("Persistence configuration: Offline ready."));
 
 let currentLang = 'ur';
 let recordsCache = [];
+let currentUserProfile = { email: '', role: 'Staff', district: '' };
 
-// 📄 پیجز سوئچ کرنے کا لاجک
-function switchPage(pageId) {
-    document.querySelectorAll('main > section').forEach(sec => {
-        sec.className = 'page-hidden bg-white p-6 rounded-2xl shadow-xl border border-slate-100';
-    });
-    const target = document.getElementById(pageId);
-    target.className = 'page-active bg-white p-6 rounded-2xl shadow-xl border border-slate-100';
-    
-    if(pageId !== 'form-page') {
-        document.getElementById('orphanForm').reset();
-        document.getElementById('recordId').value = '';
-        document.getElementById('form-header-title').innerText = currentLang === 'ur' ? "کفالتِ یتامیٰ پروگرام - بنیادی معلومات فارم" : "Orphan Care Program - Registration Form";
+// 📑 موبائل ٹیکسٹ ایریا کا آٹو ہائٹ ایڈجسٹمنٹ سسٹم
+function autoExpand(textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+}
+
+// 🔐 یوزر لاگ ان سسٹمز اور رول بائنڈنگ لاجک
+async function handleLogin(e) {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value;
+    const pass = document.getElementById('loginPassword').value;
+
+    try {
+        const userCredential = await auth.signInWithEmailAndPassword(email, pass);
+        setupUserEnvironment(userCredential.user);
+    } catch (err) {
+        alert("لاگ ان ناموفق رہا! برائے مہربانی ای میل اور پاس ورڈ دوبارہ چیک کریں۔\n" + err.message);
     }
 }
 
-// 🌍 زبان تبدیل کرنے کا فنکشن (Urdu <-> English)
-function toggleLanguage() {
-    currentLang = currentLang === 'ur' ? 'en' : 'ur';
-    const htmlTag = document.getElementById('html-tag');
-    const langBtn = document.getElementById('lang-btn');
-    
-    if (currentLang === 'en') {
-        htmlTag.setAttribute('dir', 'ltr');
-        htmlTag.classList.remove('urdu-font');
-        langBtn.innerText = "اردو";
-        document.getElementById('app-main-title').innerText = "Orphan Care Program Dashboard";
+// 🔄 صارف کے بدلتے ہی پورا سسٹم اور ڈیش بورڈ ری سیٹ کریں
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        setupUserEnvironment(user);
     } else {
-        htmlTag.setAttribute('dir', 'rtl');
-        htmlTag.classList.add('urdu-font');
-        langBtn.innerText = "English";
-        document.getElementById('app-main-title').innerText = "کفالتِ یتامیٰ ڈیش بورڈ";
+        document.getElementById('login-screen').classList.remove('page-hidden');
+        document.getElementById('main-sidebar').classList.add('page-hidden');
+        document.getElementById('main-content-wrapper').classList.add('page-hidden');
+    }
+});
+
+function setupUserEnvironment(user) {
+    document.getElementById('login-screen').classList.add('page-hidden');
+    document.getElementById('main-sidebar').classList.remove('page-hidden');
+    document.getElementById('main-content-wrapper').classList.remove('page-hidden');
+
+    currentUserProfile.email = user.email;
+    
+    // رولز ڈیفائننگ سیکیورٹی فلٹرز (ڈیفالٹ ایڈمن رول سیٹ اپ)
+    if (user.email.startsWith('admin')) {
+        currentUserProfile.role = 'Admin';
+        currentUserProfile.district = 'ALL';
+        document.getElementById('user-role-badge').innerText = "Super Admin Portal";
+        document.getElementById('admin-user-creator-block').classList.remove('page-hidden');
+        document.getElementById('userDistrict').removeAttribute('readonly');
+    } else {
+        currentUserProfile.role = 'Staff';
+        // ای میل سے ضلع کا نام اخذ کریں (مثال: peshawar.staff@alkhidmat.org)
+        const extraction = user.email.split('.')[0];
+        currentUserProfile.district = extraction.charAt(0).toUpperCase() + extraction.slice(1);
+        document.getElementById('user-role-badge').innerText = `District: ${currentUserProfile.district}`;
+        document.getElementById('admin-user-creator-block').classList.add('page-hidden');
+        
+        // فیلڈ ورکر کا ضلع لاک کریں تا کہ وہ دوسرے ضلع کا ڈیٹا نہ بدلے
+        const distField = document.getElementById('userDistrict');
+        distField.value = currentUserProfile.district;
+        distField.setAttribute('readonly', 'true');
     }
 
-    // Translate UI Elements containing data attribute targets
-    document.querySelectorAll('[data-ur]').forEach(el => {
-        el.innerText = currentLang === 'ur' ? el.getAttribute('data-ur') : el.getAttribute('data-en');
-    });
+    document.getElementById('profile-email-lbl').innerText = currentUserProfile.email;
+    document.getElementById('profile-role-lbl').innerText = currentUserProfile.role;
+    document.getElementById('profile-district-lbl').innerText = currentUserProfile.district;
+
+    loadLiveDatabaseRecords();
 }
 
-// 💾 فارم سبمٹ (Add یا Update) ہینڈلر
+function handleLogout() {
+    auth.signOut().then(() => location.reload());
+}
+
+// 🛠️ نیا یوزر اکاؤنٹ بنانے کا میکانزم (صرف ایڈمن کے لیے)
+async function createNewUserAccount(e) {
+    e.preventDefault();
+    if (currentUserProfile.role !== 'Admin') return alert("آپ کے پاس نیا اکاؤنٹ بنانے کا اختیار نہیں ہے!");
+    
+    const email = document.getElementById('newUserEmail').value;
+    const pass = document.getElementById('newUserPassword').value;
+    const boundDist = document.getElementById('newUserDistrict').value;
+
+    try {
+        // عارضی طور پر دوسرے سیشن کی تخلیق
+        const secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary");
+        await secondaryApp.auth().createUserWithEmailAndPassword(email, pass);
+        await db.collection("users_registry").doc(email).set({ boundDistrict: boundDist });
+        secondaryApp.delete();
+        
+        alert(`کلسٹر اکاؤنٹ (${email}) کامیابی سے رجسٹر ہو گیا ہے!`);
+        document.getElementById('userCreationForm').reset();
+    } catch (err) {
+        alert("اکاؤنٹ رجسٹریشن میں خرابی آئی: " + err.message);
+    }
+}
+
+// 🔢 لائیو ماسکنگ فلٹرز برائے شناختی کارڈ اور موبائل فونز
+document.addEventListener('input', (e) => {
+    if (e.target.classList.contains('cnic-mask')) {
+        let val = e.target.value.replace(/\D/g, '');
+        if (val.length > 13) val = val.substring(0, 13);
+        let out = '';
+        if (val.length > 0) out += val.substring(0, 5);
+        if (val.length > 5) out += '-' + val.substring(5, 12);
+        if (val.length > 12) out += '-' + val.substring(12, 13);
+        e.target.value = out;
+    }
+    if (e.target.classList.contains('phone-mask')) {
+        let val = e.target.value.replace(/\D/g, '');
+        if (val.length > 11) val = val.substring(0, 11);
+        let out = '';
+        if (val.length > 0) out += val.substring(0, 4);
+        if (val.length > 4) out += '-' + val.substring(4, 11);
+        e.target.value = out;
+    }
+});
+
+// 👩‍👦 "والدہ ہی سرپرست ہیں" آٹو فل اور لاک لاجک سسٹمز
+function toggleMotherAsGuardian() {
+    const isChecked = document.getElementById('motherIsGuardian').checked;
+    const fields = ['guardianName', 'guardianRelation', 'guardianCnic', 'guardianJob', 'guardianMobile', 'guardianAddress'];
+
+    if (isChecked) {
+        document.getElementById('guardianName').value = document.getElementById('motherName').value;
+        document.getElementById('guardianRelation').value = "والدہ / Mother";
+        document.getElementById('guardianCnic').value = document.getElementById('motherCnic').value;
+        document.getElementById('guardianJob').value = document.getElementById('motherJobDetails').value || "گھریلو خاتون";
+        document.getElementById('guardianMobile').value = document.getElementById('motherMobile').value;
+        document.getElementById('guardianAddress').value = document.getElementById('motherCurrentAddress').value;
+
+        fields.forEach(f => document.getElementById(f).setAttribute('disabled', 'true'));
+    } else {
+        fields.forEach(f => {
+            document.getElementById(f).removeAttribute('disabled');
+            document.getElementById(f).value = '';
+        });
+    }
+}
+
+// 📸 کلائنٹ سائیڈ ہائی کمپریشن اسکینر اپلوڈر لاجک (بغیر کوالٹی خراب کیے سائز کم کریں)
+async function compressAndUploadFile(inputEl, fieldIdPointer) {
+    const file = inputEl.files[0];
+    if (!file) return;
+
+    const statusSpan = document.getElementById(`${fieldIdPointer}-status`);
+    statusSpan.innerText = "⏳ فائل اسکین اور کمپریس ہو رہی ہے...";
+    statusSpan.className = "text-xs block font-bold text-amber-600 animate-pulse";
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = function (event) {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = function () {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 1200; // کلاؤڈ کے لیے آئیڈیل چوڑائی
+            let width = img.width;
+            let height = img.height;
+
+            if (width > MAX_WIDTH) {
+                height *= MAX_WIDTH / width;
+                width = MAX_WIDTH;
+            }
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // تصویر کو انتہائی لائٹ ویٹ (65% کوالٹی JPEG) میں بدلیں
+            canvas.toBlob(async function (blob) {
+                try {
+                    const storageRef = storage.ref(`documents/${Date.now()}_${file.name}`);
+                    const snapshot = await storageRef.put(blob);
+                    const downloadUrl = await snapshot.ref.getDownloadURL();
+                    
+                    // کلائنٹ پوائنٹر کو کلاؤڈ یو آر ایل اسائن کریں
+                    inputEl.setAttribute('data-uploaded-url', downloadUrl);
+                    statusSpan.innerText = `✓ اسکین مکمل (${(blob.size/1024).toFixed(1)} KB) - کلاؤڈ پر سیو ہے`;
+                    statusSpan.className = "text-xs block font-bold text-green-600";
+                } catch (err) {
+                    statusSpan.innerText = "✕ اپلوڈ فیل ہو گیا۔ انٹرنیٹ چیک کریں۔";
+                    statusSpan.className = "text-xs block font-bold text-rose-600";
+                }
+            }, 'image/jpeg', 0.65);
+        };
+    };
+}
+
+// 💾 ڈیٹا بیس کرڈ آپریشنز (CRUD Write/Update Operations)
 async function handleFormSubmit(e) {
     e.preventDefault();
-    
     const id = document.getElementById('recordId').value;
+
     const docData = {
-        // Child Info
+        userDistrict: document.getElementById('userDistrict').value,
+        userCluster: document.getElementById('userCluster').value,
         childName: document.getElementById('childName').value,
         regNo: document.getElementById('regNo').value,
         gender: document.getElementById('gender').value,
@@ -80,21 +224,15 @@ async function handleFormSubmit(e) {
         language: document.getElementById('language').value,
         futureAsp: document.getElementById('futureAsp').value,
         disability: document.getElementById('disability').value,
-        
-        // School Info
         schoolName: document.getElementById('schoolName').value,
         className: document.getElementById('className').value,
         schoolAddress: document.getElementById('schoolAddress').value,
-        
-        // Father Info
         fatherName: document.getElementById('fatherName').value,
         fatherDod: document.getElementById('fatherDod').value,
         fatherReasonDod: document.getElementById('fatherReasonDod').value,
         fatherPlaceDod: document.getElementById('fatherPlaceDod').value,
         fatherJob: document.getElementById('fatherJob').value,
         fatherCnic: document.getElementById('fatherCnic').value,
-        
-        // Mother Info
         motherName: document.getElementById('motherName').value,
         motherStatus: document.getElementById('motherStatus').value,
         motherCnic: document.getElementById('motherCnic').value,
@@ -111,133 +249,123 @@ async function handleFormSubmit(e) {
         motherMobile: document.getElementById('motherMobile').value,
         motherCurrentAddress: document.getElementById('motherCurrentAddress').value,
         motherPermanentAddress: document.getElementById('motherPermanentAddress').value,
-        
-        // Guardian Info
         guardianName: document.getElementById('guardianName').value,
         guardianRelation: document.getElementById('guardianRelation').value,
         guardianCnic: document.getElementById('guardianCnic').value,
         guardianJob: document.getElementById('guardianJob').value,
         guardianMobile: document.getElementById('guardianMobile').value,
         guardianAddress: document.getElementById('guardianAddress').value,
-        
-        // Bank Info
         bankName: document.getElementById('bankName').value,
         bankBranchCode: document.getElementById('bankBranchCode').value,
         bankBranchAddress: document.getElementById('bankBranchAddress').value,
         bankAccountTitle: document.getElementById('bankAccountTitle').value,
         bankIban: document.getElementById('bankIban').value,
         
-        // Checklist Docs Status
         docPhoto: document.getElementById('docPhoto').checked,
         docBirthCert: document.getElementById('docBirthCert').checked,
         docDeathCert: document.getElementById('docDeathCert').checked,
         docMotherCnic: document.getElementById('docMotherCnic').checked,
         docFatherCnic: document.getElementById('docFatherCnic').checked,
         docSchoolCert: document.getElementById('docSchoolCert').checked,
-        
+
+        // کلاؤڈ اسکین یو آر ایل کیپچرنگ میپ
+        docPhotoUrl: document.getElementById('docPhoto').nextElementSibling.nextElementSibling.getAttribute('data-uploaded-url') || '',
+        docBirthCertUrl: document.getElementById('docBirthCert').nextElementSibling.nextElementSibling.getAttribute('data-uploaded-url') || '',
+        docDeathCertUrl: document.getElementById('docDeathCert').nextElementSibling.nextElementSibling.getAttribute('data-uploaded-url') || '',
+        docMotherCnicUrl: document.getElementById('docMotherCnic').nextElementSibling.nextElementSibling.getAttribute('data-uploaded-url') || '',
+        docFatherCnicUrl: document.getElementById('docFatherCnic').nextElementSibling.nextElementSibling.getAttribute('data-uploaded-url') || '',
+        docSchoolCertUrl: document.getElementById('docSchoolCert').nextElementSibling.nextElementSibling.getAttribute('data-uploaded-url') || '',
+
         lastUpdated: new Date().getTime()
     };
 
     try {
-        if(id) {
-            // Update mode
+        if (id) {
             await db.collection("orphans_records").doc(id).set(docData, { merge: true });
-            alert(currentLang === 'ur' ? "ریکارڈ کامیابی سے اپڈیٹ ہو گیا!" : "Record updated successfully!");
+            alert("پروفائل ریکارڈ کامیابی سے اپڈیٹ ہو گیا!");
         } else {
-            // New entry creation mode
             await db.collection("orphans_records").add(docData);
-            alert(currentLang === 'ur' ? "نیا ریکارڈ کامیابی سے محفوظ ہو گیا!" : "New record saved successfully!");
+            alert("نیا فیملی ریکارڈ کامیابی سے کلاؤڈ پر محفوظ ہو گیا!");
         }
         document.getElementById('orphanForm').reset();
         switchPage('records-page');
     } catch (err) {
-        console.error("Database Write Error: ", err);
-        alert("ڈیٹا محفوظ کرنے میں خرابی پیش آئی۔ لوکل اسٹوریج فعال ہے۔");
+        alert("ڈیٹا ہینڈلنگ ایرر: آف لائن پرسٹنس محفوظ ہے۔");
     }
 }
 
-// 🔄 ریئل ٹائم ڈیٹا مانیٹرنگ اور ٹیبل اپڈیٹس
-db.collection("orphans_records").orderBy("lastUpdated", "desc").onSnapshot((snapshot) => {
-    recordsCache = [];
-    const tbody = document.getElementById('records-tbody');
-    tbody.innerHTML = '';
-
-    if(snapshot.empty) {
-        tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">کوئی ریکارڈ دستیاب نہیں ہے</td></tr>`;
-        return;
-    }
-
-    snapshot.forEach((doc) => {
-        const item = doc.data();
-        item.id = doc.id;
-        recordsCache.push(item);
-
-        const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
-        tr.innerHTML = `
-            <td class="p-3 text-center font-semibold text-slate-700">${item.regNo}</td>
-            <td class="p-3 font-bold text-slate-900">${item.childName}</td>
-            <td class="p-3 text-slate-600">${item.fatherName || 'N/A'}</td>
-            <td class="p-3 text-slate-600">${item.motherMobile || 'N/A'}</td>
-            <td class="p-3 text-center space-x-1 space-x-reverse">
-                <button onclick="editRecord('${item.id}')" class="bg-amber-500 hover:bg-amber-600 text-white text-xs py-1.5 px-3 rounded-md transition cursor-pointer">ایڈٹ</button>
-                <button onclick="downloadPDF('${item.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs py-1.5 px-3 rounded-md transition cursor-pointer">PDF</button>
-                <button onclick="deleteRecord('${item.id}')" class="bg-rose-600 hover:bg-rose-700 text-white text-xs py-1.5 px-3 rounded-md transition cursor-pointer">حذف</button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-});
-
-// 🔎 لائیو سرچ فلٹر فنکشن
-function filterRecords() {
-    const query = document.getElementById('searchBar').value.toLowerCase();
-    const rows = document.querySelectorAll('#records-tbody tr');
+// 🔄 ریئل ٹائم سیکیور ڈیٹا لوڈر (رول بیسڈ فلٹریشن)
+function loadLiveDatabaseRecords() {
+    let queryRef = db.collection("orphans_records");
     
-    rows.forEach(row => {
-        const text = row.innerText.toLowerCase();
-        row.style.display = text.includes(query) ? '' : 'none';
+    // اگر یوزر عام کوآرڈینیٹر ہے تو سیکیورٹی رول کے تحت صرف اس کے ضلع کا ڈیٹا لاؤ
+    if (currentUserProfile.role !== 'Admin') {
+        queryRef = queryRef.where("userDistrict", "==", currentUserProfile.district);
+    }
+
+    queryRef.orderBy("lastUpdated", "desc").onSnapshot((snapshot) => {
+        recordsCache = [];
+        const tbody = document.getElementById('records-tbody');
+        tbody.innerHTML = '';
+
+        snapshot.forEach((doc) => {
+            const item = doc.data();
+            item.id = doc.id;
+            recordsCache.push(item);
+
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-slate-50 border-b border-slate-200/80 transition";
+            tr.innerHTML = `
+                <td class="p-3 text-center font-mono font-bold text-slate-700">${item.regNo}</td>
+                <td class="p-3 font-bold text-slate-900">${item.childName}</td>
+                <td class="p-3 text-xs text-slate-600 font-semibold">${item.userDistrict} / ${item.userCluster}</td>
+                <td class="p-3 text-slate-600 font-mono">${item.motherMobile || '-'}</td>
+                <td class="p-3 text-center space-x-1 space-x-reverse">
+                    <button onclick="editRecord('${item.id}')" class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold py-1 px-2.5 rounded-lg transition cursor-pointer">ایڈٹ</button>
+                    <button onclick="downloadPDF('${item.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-1 px-2.5 rounded-lg transition cursor-pointer">PDF پرنٹ</button>
+                    <button onclick="deleteRecord('${item.id}')" class="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-1 px-2.5 rounded-lg transition cursor-pointer">حذف</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
     });
 }
 
-// 📝 ایڈٹ موڈ فعال کرنا
+// 📝 ایڈٹ موڈ اور آٹو لاک فیلڈ فلنگ
 function editRecord(id) {
     const data = recordsCache.find(r => r.id === id);
-    if(!data) return;
+    if (!data) return;
 
     document.getElementById('recordId').value = data.id;
-    
-    // Auto populate fields
+    document.getElementById('userDistrict').value = data.userDistrict || '';
+    document.getElementById('userCluster').value = data.userCluster || '';
     document.getElementById('childName').value = data.childName || '';
     document.getElementById('regNo').value = data.regNo || '';
-    document.getElementById('gender').value = data.gender || '';
+    document.getElementById('gender').value = data.gender || 'لڑکا / Male';
     document.getElementById('dob').value = data.dob || '';
     document.getElementById('hobby').value = data.hobby || '';
     document.getElementById('language').value = data.language || 'اردو';
     document.getElementById('futureAsp').value = data.futureAsp || '';
-    document.getElementById('disability').value = data.disability || '';
-    
+    document.getElementById('disability').value = data.disability || 'نہیں / No';
     document.getElementById('schoolName').value = data.schoolName || '';
     document.getElementById('className').value = data.className || '';
     document.getElementById('schoolAddress').value = data.schoolAddress || '';
-    
     document.getElementById('fatherName').value = data.fatherName || '';
     document.getElementById('fatherDod').value = data.fatherDod || '';
     document.getElementById('fatherReasonDod').value = data.fatherReasonDod || '';
     document.getElementById('fatherPlaceDod').value = data.fatherPlaceDod || '';
     document.getElementById('fatherJob').value = data.fatherJob || '';
     document.getElementById('fatherCnic').value = data.fatherCnic || '';
-    
     document.getElementById('motherName').value = data.motherName || '';
-    document.getElementById('motherStatus').value = data.motherStatus || '';
+    document.getElementById('motherStatus').value = data.motherStatus || 'زندہ / Alive';
     document.getElementById('motherCnic').value = data.motherCnic || '';
     document.getElementById('motherDod').value = data.motherDod || '';
     document.getElementById('motherReasonDod').value = data.motherReasonDod || '';
     document.getElementById('motherChildrenCount').value = data.motherChildrenCount || '';
     document.getElementById('motherEducation').value = data.motherEducation || '';
     document.getElementById('motherUnder12Count').value = data.motherUnder12Count || '';
-    document.getElementById('motherHouseStatus').value = data.motherHouseStatus || '';
-    document.getElementById('motherJobStatus').value = data.motherJobStatus || '';
+    document.getElementById('motherHouseStatus').value = data.motherHouseStatus || 'ذاتی / Owned';
+    document.getElementById('motherJobStatus').value = data.motherJobStatus || 'نہیں / No';
     document.getElementById('motherJobDetails').value = data.motherJobDetails || '';
     document.getElementById('motherSkill').value = data.motherSkill || '';
     document.getElementById('motherIncomeSource').value = data.motherIncomeSource || '';
@@ -257,7 +385,7 @@ function editRecord(id) {
     document.getElementById('bankBranchAddress').value = data.bankBranchAddress || '';
     document.getElementById('bankAccountTitle').value = data.bankAccountTitle || '';
     document.getElementById('bankIban').value = data.bankIban || '';
-    
+
     document.getElementById('docPhoto').checked = !!data.docPhoto;
     document.getElementById('docBirthCert').checked = !!data.docBirthCert;
     document.getElementById('docDeathCert').checked = !!data.docDeathCert;
@@ -265,106 +393,67 @@ function editRecord(id) {
     document.getElementById('docFatherCnic').checked = !!data.docFatherCnic;
     document.getElementById('docSchoolCert').checked = !!data.docSchoolCert;
 
-    document.getElementById('form-header-title').innerText = "ریکارڈ تبدیل کریں / Edit Record Profile";
+    document.getElementById('form-header-title').innerText = "ریکارڈ تبدیل کریں / Edit Registration Form";
     switchPage('form-page');
 }
 
-// ❌ ڈیلیٹ ریکارڈ لاجک
 async function deleteRecord(id) {
-    if(confirm(currentLang === 'ur' ? "کیا آپ واقعی یہ ڈیٹا حذف کرنا چاہتے ہیں؟" : "Are you sure to delete this record permanent?")) {
+    if (confirm("کیا آپ واقعی اس فیملی کا ڈیٹا مستقل حذف کرنا چاہتے ہیں؟")) {
         await db.collection("orphans_records").doc(id).delete();
     }
 }
 
-// 📄 مخصوص ڈیٹا کی پروفیشنل A4 سائز پی ڈی ایف ڈاؤن لوڈر
+// 📄 پروفیشنل A4 سائز پی ڈی ایف پرنٹ اینڈ آٹو بیک فکسر
 function downloadPDF(id) {
     const data = recordsCache.find(r => r.id === id);
     if (!data) return;
 
     const dynamicContent = document.getElementById('pdf-dynamic-content');
-    
-    // Layout Structure for Printable Table Matching Official AlKhidmat Style
     dynamicContent.innerHTML = `
-        <table class="w-full border-2 border-slate-800 text-sm" style="border-collapse: collapse;">
-            <tr class="bg-slate-200"><th colspan="4" class="p-2 text-center font-bold border border-slate-800 text-base">بچے کی بنیادی معلومات</th></tr>
+        <table class="w-full border-2 border-slate-900 text-xs" style="border-collapse: collapse;" dir="rtl">
+            <tr class="bg-slate-100"><th colspan="4" class="p-2 border border-slate-900 font-bold text-center">بنیادی علاقائی بائنڈنگ معلومات</th></tr>
             <tr>
-                <td class="p-2 border border-slate-800 bg-slate-50 font-bold w-1/4">بچے کا نام:</td><td class="p-2 border border-slate-800 w-1/4">${data.childName}</td>
-                <td class="p-2 border border-slate-800 bg-slate-50 font-bold w-1/4">رجسٹریشن نمبر:</td><td class="p-2 border border-slate-800 w-1/4">${data.regNo}</td>
+                <td class="p-2 border border-slate-900 bg-slate-50 font-bold">منسلک ضلع:</td><td class="p-2 border border-slate-900">${data.userDistrict}</td>
+                <td class="p-2 border border-slate-900 bg-slate-50 font-bold">کلسٹر زون نام:</td><td class="p-2 border border-slate-900">${data.userCluster}</td>
+            </tr>
+            <tr class="bg-slate-100"><th colspan="4" class="p-2 border border-slate-900 font-bold text-center">1۔ بچے کی معلومات</th></tr>
+            <tr>
+                <td class="p-2 border border-slate-900 bg-slate-50 font-bold">بچے کا نام:</td><td class="p-2 border border-slate-900">${data.childName}</td>
+                <td class="p-2 border border-slate-900 bg-slate-50 font-bold">رجسٹریشن نمبر:</td><td class="p-2 border border-slate-900">${data.regNo}</td>
             </tr>
             <tr>
-                <td class="p-2 border border-slate-800 bg-slate-50 font-bold">جنس:</td><td class="p-2 border border-slate-800">${data.gender}</td>
-                <td class="p-2 border border-slate-800 bg-slate-50 font-bold">تاریخِ پیدائش:</td><td class="p-2 border border-slate-800">${data.dob}</td>
+                <td class="p-2 border border-slate-900 bg-slate-50 font-bold">جنس / تاریخِ پیدائش:</td><td class="p-2 border border-slate-900">${data.gender} / ${data.dob}</td>
+                <td class="p-2 border border-slate-900 bg-slate-50 font-bold">زبان / معذوری:</td><td class="p-2 border border-slate-900">${data.language} / ${data.disability}</td>
+            </tr>
+            <tr class="bg-slate-100"><th colspan="4" class="p-2 border border-slate-900 font-bold text-center">2۔ بچے کی تعلیمی اسکول رپورٹ</th></tr>
+            <tr>
+                <td class="p-2 border border-slate-900 bg-slate-50 font-bold">اسکول کا نام / کلاس:</td><td class="p-2 border border-slate-900">${data.schoolName || '-'} (درجہ: ${data.className || '-'})</td>
+                <td class="p-2 border border-slate-900 bg-slate-50 font-bold">اسکول ایڈریس:</td><td class="p-2 border border-slate-900">${data.schoolAddress || '-'}</td>
+            </tr>
+            <tr class="bg-slate-100"><th colspan="4" class="p-2 border border-slate-900 font-bold text-center">3۔ والد کی تفصیلی معلومات (مرحوم)</th></tr>
+            <tr>
+                <td class="p-2 border border-slate-900 bg-slate-50 font-bold">والد کا نام:</td><td class="p-2 border border-slate-900">${data.fatherName || '-'}</td>
+                <td class="p-2 border border-slate-900 bg-slate-50 font-bold">تاریخ و وجہِ وفات:</td><td class="p-2 border border-slate-900">${data.fatherDod || '-'} (${data.fatherReasonDod || '-'})</td>
             </tr>
             <tr>
-                <td class="p-2 border border-slate-800 bg-slate-50 font-bold">پسندیدہ مشغلہ:</td><td class="p-2 border border-slate-800">${data.hobby || '-'}</td>
-                <td class="p-2 border border-slate-800 bg-slate-50 font-bold">زبان / معذوری:</td><td class="p-2 border border-slate-800">${data.language} / ${data.disability}</td>
+                <td class="p-2 border border-slate-900 bg-slate-50 font-bold">پیشہ / شناختی کارڈ:</td><td class="p-2 border border-slate-900" colspan="3">${data.fatherJob || '-'} | CNIC: ${data.fatherCnic || '-'}</td>
+            </tr>
+            <tr class="bg-slate-100"><th colspan="4" class="p-2 border border-slate-900 font-bold text-center">4۔ والدہ کی معلومات</th></tr>
+            <tr>
+                <td class="p-2 border border-slate-900 bg-slate-50 font-bold">والدہ کا نام:</td><td class="p-2 border border-slate-900">${data.motherName || '-'} (${data.motherStatus})</td>
+                <td class="p-2 border border-slate-900 bg-slate-50 font-bold">والدہ کا CNIC:</td><td class="p-2 border border-slate-900">${data.motherCnic || '-'}</td>
             </tr>
             <tr>
-                <td class="p-2 border border-slate-800 bg-slate-50 font-bold">مستقبل کی خواہش:</td><td class="p-2 border border-slate-800" colspan="3">${data.futureAsp || '-'}</td>
-            </tr>
-
-            <tr class="bg-slate-200"><th colspan="4" class="p-2 text-center font-bold border border-slate-800 text-base">بچے کی تعلیمی معلومات برائے اسکول</th></tr>
-            <tr>
-                <td class="p-2 border border-slate-800 bg-slate-50 font-bold">اسکول کا نام:</td><td class="p-2 border border-slate-800">${data.schoolName || '-'}</td>
-                <td class="p-2 border border-slate-800 bg-slate-50 font-bold">کلاس / درجہ:</td><td class="p-2 border border-slate-800">${data.className || '-'}</td>
+                <td class="p-2 border border-slate-900 bg-slate-50 font-bold">بچوں کی تعداد / تعلیم:</td><td class="p-2 border border-slate-900">${data.motherChildrenCount || 0} (12 سال سے کم: ${data.motherUnder12Count || 0}) | تعلیم: ${data.motherEducation || '-'}</td>
+                <td class="p-2 border border-slate-900 bg-slate-50 font-bold">مکان / نوکری / ہنر:</td><td class="p-2 border border-slate-900">${data.motherHouseStatus} | ملازمت: ${data.motherJobStatus} (${data.motherJobDetails || '-'}) | ہنر: ${data.motherSkill || '-'}</td>
             </tr>
             <tr>
-                <td class="p-2 border border-slate-800 bg-slate-50 font-bold">اسکول کا پتہ:</td><td class="p-2 border border-slate-800" colspan="3">${data.schoolAddress || '-'}</td>
+                <td class="p-2 border border-slate-900 bg-slate-50 font-bold">موبائل نمبر اور ایڈریس:</td><td class="p-2 border border-slate-900" colspan="3">${data.motherMobile || '-'} | پتہ: ${data.motherCurrentAddress || '-'}</td>
             </tr>
-
-            <tr class="bg-slate-200"><th colspan="4" class="p-2 text-center font-bold border border-slate-800 text-base">والد کی تفصیلات (مرحوم)</th></tr>
+            <tr class="bg-slate-100"><th colspan="4" class="p-2 border border-slate-900 font-bold text-center">5۔ سرپرست اور بینک تفصیلات</th></tr>
             <tr>
-                <td class="p-2 border border-slate-800 bg-slate-50 font-bold">والد کا نام:</td><td class="p-2 border border-slate-800">${data.fatherName || '-'}</td>
-                <td class="p-2 border border-slate-800 bg-slate-50 font-bold">تاریخِ وفات:</td><td class="p-2 border border-slate-800">${data.fatherDod || '-'}</td>
-            </tr>
-            <tr>
-                <td class="p-2 border border-slate-800 bg-slate-50 font-bold">وجہِ وفات / مقام:</td><td class="p-2 border border-slate-800">${data.fatherReasonDod || '-'} / ${data.fatherPlaceDod || '-'}</td>
-                <td class="p-2 border border-slate-800 bg-slate-50 font-bold">پیشہ / شناختی کارڈ:</td><td class="p-2 border border-slate-800">${data.fatherJob || '-'} / ${data.fatherCnic || '-'}</td>
-            </tr>
-
-            <tr class="bg-slate-200"><th colspan="4" class="p-2 text-center font-bold border border-slate-800 text-base">والدہ کی تفصیلات</th></tr>
-            <tr>
-                <td class="p-2 border border-slate-800 bg-slate-50 font-bold">والدہ کا نام / اسٹیٹس:</td><td class="p-2 border border-slate-800">${data.motherName || '-'} (${data.motherStatus})</td>
-                <td class="p-2 border border-slate-800 bg-slate-50 font-bold">والدہ کا CNIC:</td><td class="p-2 border border-slate-800">${data.motherCnic || '-'}</td>
-            </tr>
-            <tr>
-                <td class="p-2 border border-slate-800 bg-slate-50 font-bold">بچوں کی کل تعداد / &lt; 12 سال:</td><td class="p-2 border border-slate-800">${data.motherChildrenCount || 0} / ${data.motherUnder12Count || 0}</td>
-                <td class="p-2 border border-slate-800 bg-slate-50 font-bold">تعلیم / مکان:</td><td class="p-2 border border-slate-800">${data.motherEducation || '-'} / ${data.motherHouseStatus}</td>
-            </tr>
-            <tr>
-                <td class="p-2 border border-slate-800 bg-slate-50 font-bold">ملازمت / ہنر / آمدن:</td><td class="p-2 border border-slate-800" colspan="3">${data.motherJobStatus} (${data.motherJobDetails || '-'}) | ہنر: ${data.motherSkill || '-'} | آمدن: ${data.motherIncomeSource || '-'}</td>
-            </tr>
-            <tr>
-                <td class="p-2 border border-slate-800 bg-slate-50 font-bold">رابطہ نمبر:</td><td class="p-2 border border-slate-800" colspan="3">${data.motherMobile || '-'}</td>
-            </tr>
-            <tr>
-                <td class="p-2 border border-slate-800 bg-slate-50 font-bold">موجودہ پتہ:</td><td class="p-2 border border-slate-800" colspan="3">${data.motherCurrentAddress || '-'}</td>
-            </tr>
-
-            <tr class="bg-slate-200"><th colspan="4" class="p-2 text-center font-bold border border-slate-800 text-base">سرپرست کی تفصیلات</th></tr>
-            <tr>
-                <td class="p-2 border border-slate-800 bg-slate-50 font-bold">سرپرست کا نام / رشتہ:</td><td class="p-2 border border-slate-800">${data.guardianName || '-'} (${data.guardianRelation || '-'})</td>
-                <td class="p-2 border border-slate-800 bg-slate-50 font-bold">شناختی کارڈ / موبائل:</td><td class="p-2 border border-slate-800">${data.guardianCnic || '-'} / ${data.guardianMobile || '-'}</td>
-            </tr>
-
-            <tr class="bg-slate-200"><th colspan="4" class="p-2 text-center font-bold border border-slate-800 text-base">بینک اکاؤنٹ کی تفصیلات</th></tr>
-            <tr>
-                <td class="p-2 border border-slate-800 bg-slate-50 font-bold">بینک / برانچ کوڈ:</td><td class="p-2 border border-slate-800">${data.bankName || '-'} (${data.bankBranchCode || '-'})</td>
-                <td class="p-2 border border-slate-800 bg-slate-50 font-bold">اکاؤنٹ ٹائٹل:</td><td class="p-2 border border-slate-800">${data.bankAccountTitle || '-'}</td>
-            </tr>
-            <tr>
-                <td class="p-2 border border-slate-800 bg-slate-50 font-bold">IBAN نمبر:</td><td class="p-2 border border-slate-800" colspan="3">${data.bankIban || '-'}</td>
-            </tr>
-
-            <tr class="bg-slate-200"><th colspan="4" class="p-2 text-center font-bold border border-slate-800 text-base">دستاویزات کی فراہمی چیک لسٹ</th></tr>
-            <tr>
-                <td class="p-2 border border-slate-800" colspan="4">
-                    بچے کی تصویر: <b>${data.docPhoto ? 'فراہم کی گئی ہے' : 'نہیں ہے'}</b> | 
-                    ب فارم: <b>${data.docBirthCert ? 'فراہم کی گئی ہے' : 'نہیں ہے'}</b> | 
-                    ڈیتھ سرٹیفکیٹ: <b>${data.docDeathCert ? 'فراہم کی گئی ہے' : 'نہیں ہے'}</b> | 
-                    والدہ شناختی کارڈ: <b>${data.docMotherCnic ? 'فراہم کی گئی ہے' : 'نہیں ہے'}</b> | 
-                    اسکول سرٹیفکیٹ: <b>${data.docSchoolCert ? 'منسلک ہے' : 'منسلک نہیں ہے'}</b>
-                </td>
+                <td class="p-2 border border-slate-900 bg-slate-50 font-bold">سرپرست کا نام و رشتہ:</td><td class="p-2 border border-slate-900">${data.guardianName || '-'} (${data.guardianRelation || '-'})</td>
+                <td class="p-2 border border-slate-900 bg-slate-50 font-bold">بینک برانچ و IBAN:</td><td class="p-2 border border-slate-900">${data.bankName || '-'} | IBAN: ${data.bankIban || '-'}</td>
             </tr>
         </table>
     `;
@@ -372,41 +461,82 @@ function downloadPDF(id) {
     const printElement = document.getElementById('pdf-container');
     printElement.classList.remove('hidden');
 
-    const conversionOptions = {
-        margin:       12,
-        filename:     `AlKhidmat_Form_${data.regNo}.pdf`,
-        image:        { type: 'jpeg', quality: 1.0 },
+    const opt = {
+        margin:       10,
+        filename:     `AlKhidmat_Profile_${data.regNo}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    // Trigger PDF compilation and hide layout container after generation completes
-    html2pdf().set(conversionOptions).from(printElement).save().then(() => {
-        printElement.classList.add('hidden');
+    html2pdf().set(opt).from(printElement).save().then(() => {
+        printElement.classList.add('hidden'); // فوراً اسکرین نارمل بیک گراؤنڈ پر لے کر آئیں
     });
 }
 
-// 📊 تمام ڈیٹا یکجا طور پر ایکسیل (Excel) شیٹ میں ایکسپورٹ کرنے کا لاجک
 function exportToExcel() {
-    if(recordsCache.length === 0) {
-        alert("ایکسپورٹ کرنے کے لیے کوئی ریکارڈ موجود نہیں ہے!");
-        return;
-    }
-    
-    // Eliminate firebase dynamic fields before user download
-    const cleanList = recordsCache.map(({id, lastUpdated, ...actualFields}) => actualFields);
-    
+    if (recordsCache.length === 0) return alert("ایکسپورٹ کے لیے ڈیٹا دستیاب نہیں ہے!");
+    const cleanList = recordsCache.map(({ id, lastUpdated, docPhotoUrl, docBirthCertUrl, docDeathCertUrl, docMotherCnicUrl, docFatherCnicUrl, docSchoolCertUrl, ...fields }) => fields);
     const worksheet = XLSX.utils.json_to_sheet(cleanList);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Orphan Database");
-    XLSX.writeFile(workbook, "AlKhidmat_Orphans_Master_Report.xlsx");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Database");
+    XLSX.writeFile(workbook, "AlKhidmat_Orphans_Master_Sheet.xlsx");
 }
 
-// 🌐 Progressive Web App (PWA) Service Worker Initialization
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js')
-            .then(reg => console.log('PWA Offline Service Worker: Active'))
-            .catch(err => console.error('Service Worker Fault: ', err));
+function filterRecords() {
+    const q = document.getElementById('searchBar').value.toLowerCase();
+    document.querySelectorAll('#records-tbody tr').forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none';
     });
+}
+
+function switchPage(p) {
+    document.querySelectorAll('main > section').forEach(s => s.className = 'page-hidden bg-white p-5 md:p-8 rounded-2xl shadow-xl border border-slate-200/60');
+    document.getElementById(p).className = 'page-active bg-white p-5 md:p-8 rounded-2xl shadow-xl border border-slate-200/60';
+}
+
+function toggleLanguage() {
+    currentLang = currentLang === 'ur' ? 'en' : 'ur';
+    const tag = document.getElementById('html-tag');
+    if(currentLang === 'en') {
+        tag.setAttribute('dir', 'ltr'); tag.classList.remove('urdu-font');
+        document.getElementById('lang-btn').innerText = "اردو";
+    } else {
+        tag.setAttribute('dir', 'rtl'); tag.classList.add('urdu-font');
+        document.getElementById('lang-btn').innerText = "English";
+    }
+}
+
+// 🌐 لائیو نیٹ ورک کنکشن مانیٹر (آن لائن / آف لائن آٹو بیج ٹوگل)
+function updateOnlineStatus() {
+    const badge = document.getElementById('offline-badge');
+    if (navigator.onLine) {
+        badge.className = "bg-green-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full";
+        badge.innerText = currentLang === 'ur' ? "● آن لائن موڈ" : "● Online Mode";
+    } else {
+        badge.className = "bg-amber-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full animate-pulse";
+        badge.innerText = currentLang === 'ur' ? "● آف لائن موڈ فعال ہے" : "● Offline Mode Active";
+    }
+}
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus();
+
+// 📱 PWA ون کلک انسٹال بٹن لاجک
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault(); deferredPrompt = e;
+    document.getElementById('pwa-install-btn').classList.remove('hidden');
+});
+document.getElementById('pwa-install-btn').addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') document.getElementById('pwa-install-btn').classList.add('hidden');
+    deferredPrompt = null;
+});
+
+// Service worker registration
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js'); });
 }
