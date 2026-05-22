@@ -1,0 +1,16 @@
+{
+  "name": "الخدمت کفالتِ یتامیٰ سسٹم",
+  "short_name": "کفالتِ یتامیٰ",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#15803d",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2942/2942924.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
